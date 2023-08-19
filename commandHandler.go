@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"strings"
@@ -10,67 +12,62 @@ var aliases = getAliases()
 var shortcuts = getShortcuts()
 var commands = getCommands()
 
-// not tested
-func handleCommand(command string) string {
+func handleCommand(command string) (string, bool) {
 	command = strings.ToLower(command)
 	var alias, okAlias = aliases[command]
 	if okAlias {
 		var shortcut, okShortcut = shortcuts[alias]
 		if okShortcut {
 			runLnk(shortcut)
-			return "Opened" + shortcut
+			return "Started " + alias, true
 		}
 	}
 
 	var shortcut, okShortcut = shortcuts[command]
 	if okShortcut {
 		runLnk(shortcut)
-		return "Opened" + shortcut
+		return "Started " + command, true
 	}
 
 	var cmd, okCmd = commands[command]
 	if okCmd {
 		cmd()
-		return ""
+		return "", false
 	}
 
-	runCommand(command)
-	return ""
+	var res, _ = runCommand(command)
+	return res, true
 }
 
-// works
-func runLnk(lnkCmd string) {
-	var cmd = exec.Command(lnkCmd)
+func runLnk(lnkCmd shortcut) {
+	var cmd = exec.Command("powershell", "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
 	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	cmd.Run()
+	go cmd.Run()
 }
 
-// works /not tested the cd part bcuz the app isnt done yet
 func getCommands() map[string]func() {
 	var cmds = make(map[string]func())
 
 	cmds["fe"] = func() {
-		runCommand("fzf | Split-Path | cd")
+		//todo
 	}
 	cmds["ef"] = func() {
-		runCommand("fzf | % { code $_ }")
+		//todo
 	}
 
 	return cmds
 }
 
-// works
-func runCommand(cmd string) error {
-	command := exec.Command("powershell", "&", cmd)
+func runCommand(cmd string) (string, error) {
+	command := exec.Command("powershell", cmd)
 	command.Stdin = os.Stdin
-	command.Stderr = os.Stderr
-	command.Stdout = os.Stdout
 
-	var err = command.Run()
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+
+	var res, err = command.Output()
 	if err != nil {
-		return err
+		return stderr.String(), err
 	}
-	return nil
+	return string(res), nil
 }

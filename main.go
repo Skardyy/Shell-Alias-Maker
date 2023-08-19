@@ -17,13 +17,10 @@ func main() {
 }
 
 func initialModel() Model {
-	var t = textinput.New()
-
-	t.Focus()
+	var t = createTextInput("Enter Command..")
 
 	var model = Model{
 		inputField: t,
-		enter:      false,
 	}
 
 	return model
@@ -31,7 +28,6 @@ func initialModel() Model {
 
 type Model struct {
 	inputField textinput.Model
-	enter      bool
 }
 
 func (m *Model) Init() tea.Cmd {
@@ -45,17 +41,15 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c":
 			return m, tea.Quit
 		case "enter":
-			go handleCommand(m.inputField.Value())
-			m.enter = true
-			m.inputField.Reset()
+			var res, ok = handleCommand(m.inputField.Value())
+			m.inputField.SetValue("")
+			if ok {
+				return m, tea.Printf(res)
+			}
 			return m, nil
 		}
 	}
 
-	if m.enter {
-		m.enter = false
-		m.inputField.Cursor.Focus()
-	}
 	var cmd tea.Cmd
 	m.inputField, cmd = m.inputField.Update(msg)
 	return m, cmd

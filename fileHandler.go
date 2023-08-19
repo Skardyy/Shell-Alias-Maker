@@ -12,19 +12,22 @@ import (
 	lnk "github.com/parsiya/golnk"
 )
 
-// works
-func getShortcutCmd(path string) string {
+type shortcut struct {
+	target string
+	args   string
+}
+
+func getShortcutCmd(path string) (shortcut, bool) {
 	Lnk, err := lnk.File(path)
 
 	if err != nil {
 		fmt.Println("Error opening file:", err)
-		return ""
+		return shortcut{}, false
 	}
 
 	var cmd = Lnk.LinkInfo.LocalBasePath
 	var args = Lnk.StringData.CommandLineArguments
-	cmd += " " + args
-	return cmd
+	return shortcut{target: cmd, args: args}, true
 }
 
 // find a file with the given extension in the given root folder
@@ -42,28 +45,30 @@ func find(root, ext string) []string {
 	return a
 }
 
-// works
-func getShortcuts() map[string]string {
-	var shortcuts map[string]string = make(map[string]string)
+func getShortcuts() map[string]shortcut {
+	var shortcuts map[string]shortcut = make(map[string]shortcut)
 
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	var ShortcutFolder = fmt.Sprintf("%s\\Shortcuts", executablePath)
 
 	for _, s := range find(ShortcutFolder, ".lnk") {
-		var target = getShortcutCmd(s)
+		var shortcut, ok = getShortcutCmd(s)
+
+		if !ok {
+			continue
+		}
 
 		fileName := filepath.Base(s)
 		extension := filepath.Ext(fileName)
 		nameWithoutExtension := fileName[:len(fileName)-len(extension)]
 
 		nameWithoutExtension = strings.ToLower(nameWithoutExtension)
-		shortcuts[nameWithoutExtension] = target
+		shortcuts[nameWithoutExtension] = shortcut
 	}
 
 	return shortcuts
 }
 
-// works
 func getAliases() map[string]string {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
