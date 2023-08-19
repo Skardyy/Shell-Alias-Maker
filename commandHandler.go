@@ -10,7 +10,6 @@ import (
 
 var aliases = getAliases()
 var shortcuts = getShortcuts()
-var commands = getCommands()
 
 func handleCommand(command string) (string, bool) {
 	command = strings.ToLower(command)
@@ -29,12 +28,6 @@ func handleCommand(command string) (string, bool) {
 		return "Started " + command, true
 	}
 
-	var cmd, okCmd = commands[command]
-	if okCmd {
-		cmd()
-		return "", false
-	}
-
 	var res, _ = runCommand(command)
 	return res, true
 }
@@ -43,19 +36,6 @@ func runLnk(lnkCmd shortcut) {
 	var cmd = exec.Command("powershell", "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
 	cmd.Stdin = os.Stdin
 	go cmd.Run()
-}
-
-func getCommands() map[string]func() {
-	var cmds = make(map[string]func())
-
-	cmds["fe"] = func() {
-		//todo
-	}
-	cmds["ef"] = func() {
-		//todo
-	}
-
-	return cmds
 }
 
 func runCommand(cmd string) (string, error) {
