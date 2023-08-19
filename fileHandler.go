@@ -56,6 +56,7 @@ func getShortcuts() map[string]string {
 		extension := filepath.Ext(fileName)
 		nameWithoutExtension := fileName[:len(fileName)-len(extension)]
 
+		nameWithoutExtension = strings.ToLower(nameWithoutExtension)
 		shortcuts[nameWithoutExtension] = target
 	}
 
@@ -83,8 +84,8 @@ func getAliases() map[string]string {
 			// Skip lines that don't have the expected format
 			continue
 		}
-		name := strings.TrimSpace(parts[0])
-		target := strings.TrimSpace(parts[1])
+		name := strings.ToLower(strings.TrimSpace(parts[0]))
+		target := strings.ToLower(strings.TrimSpace(parts[1]))
 		shortcuts[name] = target
 	}
 
