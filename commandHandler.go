@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"os/exec"
 )
 
@@ -33,33 +34,37 @@ func handleCommand(command string) {
 	}
 }
 
-// not tested
-func runLnk(lnkPath string) {
-	var cmd = exec.Command("powershell", "&", lnkPath)
+// works
+func runLnk(lnkCmd string) {
+	var cmd = exec.Command(lnkCmd)
 	var err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-// not tested
+// works /not tested the cd part bcuz the app isnt done yet
 func getCommands() map[string]func() {
 	var cmds = make(map[string]func())
 
 	cmds["fe"] = func() {
-		runCommand("Powershell fzf | Split-Path | cd")
+		runCommand("fzf | Split-Path | cd")
 	}
 	cmds["ef"] = func() {
-		runCommand("Powershell fzf | $ { code $_ }")
+		runCommand("fzf | % { code $_ }")
 	}
 
 	return cmds
 }
 
-// not tested
+// works
 func runCommand(cmd string) {
-	var command = exec.Command(cmd)
-	var err = command.Run()
+	command := exec.Command("powershell", "&", cmd)
+	command.Stdin = os.Stdin
+	command.Stderr = os.Stderr
+	command.Stdout = os.Stdout
+
+	err := command.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

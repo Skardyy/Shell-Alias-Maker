@@ -2,62 +2,32 @@ package main
 
 import (
 	"bufio"
-	"encoding/binary"
 	"fmt"
 	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	lnk "github.com/parsiya/golnk"
 )
 
-type ShellLinkHeader struct {
-	HeaderSize [4]byte  //HeaderSize
-	ClassID    [16]byte //LinkCLSID
-	LinkFlags  uint32   //LinkFlags      [4]byte
-	FileAttr   uint32   //FileAttributes [4]byte
-	Creation   [8]byte  //CreationTime
-	Access     [8]byte  //AccessTime
-	Write      [8]byte  //WriteTime
-	FileSz     [4]byte  //FileSize
-	IconIndex  [4]byte  //IconIndex
-	ShowCmd    [4]byte  //ShowCommand
-
-	//[2]byte HotKey values for shortcut shortcuts
-	HotKeyLow  byte //HotKeyLow
-	HotKeyHigh byte //HotKeyHigh
-
-	Reserved1 [2]byte //Reserved1
-	Reserved2 [4]byte //Reserved2
-	Reserved3 [4]byte //Reserved3
-}
-type Shortcut struct {
-	Name   string
-	Target string
-}
-
-// not tested
-func getShortcutTarget(path string) string {
-	file, err := os.Open(path)
-	defer file.Close()
+// works
+func getShortcutCmd(path string) string {
+	Lnk, err := lnk.File(path)
 
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return ""
 	}
 
-	var header ShellLinkHeader
-	err = binary.Read(file, binary.LittleEndian, &header)
-	if err != nil {
-		fmt.Println("Error reading file:", err)
-		return ""
-	}
-
-	target := fmt.Sprint(header.FileAttr)
-	return target
+	var cmd = Lnk.LinkInfo.LocalBasePath
+	var args = Lnk.StringData.CommandLineArguments
+	cmd += " " + args
+	return cmd
 }
 
-// not tested
+// find a file with the given extension in the given root folder
 func find(root, ext string) []string {
 	var a []string
 	filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
@@ -72,26 +42,31 @@ func find(root, ext string) []string {
 	return a
 }
 
-// not tested
+// works
 func getShortcuts() map[string]string {
 	var shortcuts map[string]string = make(map[string]string)
 
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var ShortcutFolder = fmt.Sprintf("%s/Shortcuts", executablePath)
+	var ShortcutFolder = fmt.Sprintf("%s\\Shortcuts", executablePath)
 
 	for _, s := range find(ShortcutFolder, ".lnk") {
-		var target = getShortcutTarget(s)
-		shortcuts[s] = target
+		var target = getShortcutCmd(s)
+
+		fileName := filepath.Base(s)
+		extension := filepath.Ext(fileName)
+		nameWithoutExtension := fileName[:len(fileName)-len(extension)]
+
+		shortcuts[nameWithoutExtension] = target
 	}
 
 	return shortcuts
 }
 
-// not tested
+// works
 func getAliases() map[string]string {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
-	file, err := os.Open(fmt.Sprintf("%s/aliases.txt", executablePath))
+	file, err := os.Open(fmt.Sprintf("%s\\Shortcuts\\aliases.txt", executablePath))
 	if err != nil {
 		log.Fatal(err)
 		return nil

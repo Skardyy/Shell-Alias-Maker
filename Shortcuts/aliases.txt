@@ -1,0 +1,8 @@
+fx: firefox
+gn: genshin-impact
+hsr: honkai-star-rail
+aqw: artix-gane-launcher
+aqw-macro: artix-gane-launcher-macro
+sc: scripts
+dc : discord
+dnb : discord-nino-bot

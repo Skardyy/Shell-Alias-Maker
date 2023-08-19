@@ -1,16 +1,25 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-	var initialModel = initialModel()
 
-	if _, err := tea.NewProgram(&initialModel, tea.WithAltScreen()).Run(); err != nil {
-		panic(err)
-	}
+	var path = "C:\\Users\\meron\\Desktop\\cli-go\\Shortcuts\\Artix Game Launcher.lnk"
+	var test = getShortcutCmd(path)
+
+	fmt.Println(test)
+	runLnk(test)
+
+	//var initialModel = initialModel()
+
+	//if _, err := tea.NewProgram(&initialModel, tea.WithAltScreen()).Run(); err != nil {
+	//	panic(err)
+	//}
 }
 
 func initialModel() Model {
