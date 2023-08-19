@@ -27,8 +27,8 @@ func initialModel() Model {
 	var model = Model{
 		inputField:    t,
 		filePicker:    f,
-		pickingFile:   true,
-		typingCommand: false,
+		pickingFile:   false,
+		typingCommand: true,
 	}
 
 	return model
@@ -54,6 +54,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			if m.pickingFile {
+				m.typingCommand = true
+				m.pickingFile = false
+				return m, nil
+			}
 		case "enter":
 			if m.pickingFile {
 				break
@@ -100,20 +106,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
-	if m.typingCommand {
-		return fmt.Sprintf("CC %s\n", m.inputField.View())
-	}
 	if m.pickingFile {
 		return fmt.Sprintf(m.filePicker.View())
 	}
+	if m.typingCommand {
+		return fmt.Sprintf("CC %s\n", m.inputField.View())
+	}
+
 	return ""
 }
 
 func (m *Model) handleCmd(cmd string) (string, bool) {
 	if cmd == "fe" || cmd == "ef" || cmd == "ef -a" {
 		m.cmd = cmd
-		m.typingCommand = false
 		m.pickingFile = true
+		m.typingCommand = false
 		return "", false
 	}
 	return handleCommand(cmd)
