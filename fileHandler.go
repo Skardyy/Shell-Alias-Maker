@@ -74,7 +74,7 @@ func getAliases() map[string]string {
 
 	file, err := os.Open(fmt.Sprintf("%s\\Shortcuts\\aliases.txt", executablePath))
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Missing ~\\Shortcut\\aliases.txt")
 		return nil
 	}
 	defer file.Close()
