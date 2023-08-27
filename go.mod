@@ -9,7 +9,6 @@ require (
 )
 
 require (
-	atomicgo.dev/keyboard v0.2.9
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
