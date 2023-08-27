@@ -8,4 +8,6 @@ download cc.exe from [latest release](https://github.com/Skardyy/cc/releases/lat
 once downloaded add the dir that contains cc.exe into your path env variable.  
 open your terminal, write cc, and you're done.  
 ### Important  
-the shortcuts folder that contains the .lnk files and aliases.txt file must be at the same dir as cc.exe
+the shortcuts folder that contains the .lnk files and aliases.txt file must be at the same dir as cc.exe  
+## to-know  
+cc dosent support io related commands.. all commands are ran asynchronous so cli apps most likely will break it.

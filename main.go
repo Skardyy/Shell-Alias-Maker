@@ -69,7 +69,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StartFix:
 		if m.start {
 			go func() {
-				time.Sleep(3 * time.Millisecond)
+				time.Sleep(10 * time.Millisecond)
 				m.typingCommand = true
 				m.pickingFile = false
 			}()
@@ -153,6 +153,9 @@ func (m *Model) View() string {
 
 func (m *Model) handleCmd(cmd string) tea.Cmd {
 	return func() tea.Msg {
+		if cmd == "cc" {
+			return CommandOuput{"", false, false}
+		}
 		if cmd == "fe" || cmd == "ef" {
 			m.cmd = cmd
 			return CommandOuput{"", false, true}
