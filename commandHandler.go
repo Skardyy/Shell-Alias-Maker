@@ -11,6 +11,7 @@ import (
 var aliases = getAliases()
 var shortcuts = getShortcuts()
 
+// returns output and boolean indicating if there is an output
 func handleCommand(command string) (string, bool) {
 	command = strings.ToLower(command)
 	var alias, okAlias = aliases[command]
@@ -32,12 +33,14 @@ func handleCommand(command string) (string, bool) {
 	return res, true
 }
 
+// runs a .lnk file
 func runLnk(lnkCmd shortcut) {
 	var cmd = exec.Command("powershell", "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
 	cmd.Stdin = os.Stdin
 	go cmd.Run()
 }
 
+// returns output of the cmd
 func runCommand(cmd string) (string, error) {
 	command := exec.Command("powershell", cmd)
 	command.Stdin = os.Stdin

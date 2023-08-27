@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/charmbracelet/bubbles/filepicker"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -27,29 +28,53 @@ func initialModel() Model {
 	var model = Model{
 		inputField:    t,
 		filePicker:    f,
-		pickingFile:   false,
-		typingCommand: true,
+		pickingFile:   true,
+		typingCommand: false,
+		start:         true,
 	}
 
 	return model
 }
 
 type Model struct {
-	inputField textinput.Model
-	filePicker filepicker.Model
+	inputField *textinput.Model
+	filePicker *filepicker.Model
 
 	pickingFile   bool
 	typingCommand bool
+	start         bool
 
 	cmd string
 }
 
+type CommandOuput struct {
+	output        string
+	isOutput      bool
+	isPickingFile bool
+}
+
+type StartFix struct {
+}
+
+func startFixMsg() tea.Msg {
+	return StartFix{}
+}
+
 func (m *Model) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink, m.filePicker.Init())
+	return tea.Batch(textinput.Blink, m.filePicker.Init(), startFixMsg)
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case StartFix:
+		if m.start {
+			go func() {
+				time.Sleep(3 * time.Millisecond)
+				m.typingCommand = true
+				m.pickingFile = false
+			}()
+			return m, startFixMsg
+		}
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c":
@@ -64,35 +89,42 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.pickingFile {
 				break
 			}
-			var res, ok = m.handleCmd(m.inputField.Value())
-			m.inputField.SetValue("")
-			if ok {
-				return m, tea.Printf(res)
+			if m.typingCommand {
+				var cmd = m.handleCmd(m.inputField.Value())
+				m.inputField.SetValue("")
+				return m, cmd
 			}
 			return m, nil
 		}
+	case CommandOuput:
+		if msg.isPickingFile {
+			m.pickingFile = true
+			m.typingCommand = false
+			return m, nil
+		}
+		if msg.isOutput {
+			return m, tea.Printf(msg.output)
+		}
+		return m, nil
 	}
-
 	if m.typingCommand {
-		var cmd tea.Cmd
-		m.inputField, cmd = m.inputField.Update(msg)
+		var inputField, cmd = m.inputField.Update(msg)
+		m.inputField = &inputField
 		return m, cmd
 	}
 	if m.pickingFile {
-		var cmd tea.Cmd
-		m.filePicker, cmd = m.filePicker.Update(msg)
+		var filePicker, cmd = m.filePicker.Update(msg)
+		m.filePicker = &filePicker
 
-		if didSelect, path := m.filePicker.DidSelectFile(msg); didSelect {
+		if didSelect, path := filePicker.DidSelectFile(msg); didSelect {
 
 			if m.cmd == "fe" {
-				os.Chdir(filepath.Dir(path)) // would be better to let select folder, but seems to not work due to some bug, idk
+				var dir = filepath.Dir(path)
+				os.Chdir(dir)
+				cmd = tea.Batch(cmd, tea.Printf(dir))
 			}
 			if m.cmd == "ef" {
 				command := exec.Command("code", path)
-				go command.Run()
-			}
-			if m.cmd == "ef -a" {
-				command := exec.Command("code", filepath.Dir(path))
 				go command.Run()
 			}
 
@@ -102,26 +134,30 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 	}
+
 	return m, nil
 }
 
 func (m *Model) View() string {
+	if m.typingCommand {
+		m.start = false
+		return fmt.Sprintf("CC %s\n", m.inputField.View())
+	}
+
 	if m.pickingFile {
 		return fmt.Sprintf(m.filePicker.View())
-	}
-	if m.typingCommand {
-		return fmt.Sprintf("CC %s\n", m.inputField.View())
 	}
 
 	return ""
 }
 
-func (m *Model) handleCmd(cmd string) (string, bool) {
-	if cmd == "fe" || cmd == "ef" || cmd == "ef -a" {
-		m.cmd = cmd
-		m.pickingFile = true
-		m.typingCommand = false
-		return "", false
+func (m *Model) handleCmd(cmd string) tea.Cmd {
+	return func() tea.Msg {
+		if cmd == "fe" || cmd == "ef" {
+			m.cmd = cmd
+			return CommandOuput{"", false, true}
+		}
+		var output, isOutput = handleCommand(cmd)
+		return CommandOuput{output, isOutput, false}
 	}
-	return handleCommand(cmd)
 }
