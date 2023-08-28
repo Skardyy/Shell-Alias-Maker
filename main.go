@@ -11,6 +11,7 @@ import (
 func main() {
 
 	var initialModel = initialModel()
+
 	var dir, _ = os.UserHomeDir()
 	os.Chdir(dir)
 

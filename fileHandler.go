@@ -18,10 +18,10 @@ type shortcut struct {
 }
 type Alias struct {
 	target string
-	args   []string
 	t      string
 }
 
+// returns a shortcut and a flag indicating whatever the shortcut was found
 func getShortcut(path string) (shortcut, bool) {
 	Lnk, err := lnk.File(path)
 
@@ -96,20 +96,17 @@ func getAliases() map[string]Alias {
 			t = strings.ToLower(strings.TrimSpace(parts[1]))
 		}
 
-		parts = strings.Split(line, ":")
+		parts = strings.Split(parts[0], ":")
 		var length = len(parts)
-		if length < 2 {
+		if length != 2 {
 			// Skip lines that don't have the expected format
 			continue
 		}
+
 		name := strings.ToLower(strings.TrimSpace(parts[0]))
 		target := strings.ToLower(strings.TrimSpace(parts[1]))
 
-		var args []string
-		if length > 2 {
-			args = parts[2:length]
-		}
-		aliases[name] = Alias{target, args, t}
+		aliases[name] = Alias{target, t}
 	}
 
 	if err := scanner.Err(); err != nil {

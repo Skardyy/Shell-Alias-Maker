@@ -28,11 +28,9 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 			return cmd, flag
 		}
 
-		var args = []string{alias.target}
-		args = append(args, alias.args...)
-		var cmd = exec.Command("Powershell", args...)
-
+		var cmd = exec.Command("Powershell", alias.target)
 		var flag = alias.t == "async"
+
 		return cmd, flag
 	}
 
@@ -59,16 +57,11 @@ func echoCommands() *exec.Cmd {
 	for key, value := range aliases {
 		counter++
 		var str = strconv.Itoa(counter) + ". " + key + " : " + value.target
-
-		var args = argsToString(value.args)
-		str += args
-
-		if value.t == "async" {
+		if value.t != "" {
 			str += " ! " + value.t + "\n"
 		} else {
 			str += "\n"
 		}
-
 		buffer.WriteString(str)
 	}
 	for key, value := range shortcuts {
@@ -77,12 +70,4 @@ func echoCommands() *exec.Cmd {
 	}
 
 	return exec.Command("powershell", "echo '"+buffer.String()+"'")
-}
-
-func argsToString(args []string) string {
-	var buffer bytes.Buffer
-	for _, arg := range args {
-		buffer.WriteString(arg + " ")
-	}
-	return buffer.String()
 }
