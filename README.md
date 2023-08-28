@@ -1,9 +1,11 @@
 ## CLI goals  
-* <font color='green'>open apps by having a folder of shortcuts to those apps</font>  
-* <font color='green'>have a file called aliases.txt to alias to those apps</font>  
-* <font color='green'>have aliases for terminal commands</font>  
-* <font color='green'>let normal terminal commands through</font>  
-* <font color='red'>create a way to make commands that install dependencies and git projects</font>  
+```diff
++ open apps by having a folder of shortcuts to those apps
++ have a file called aliases.txt to alias to those apps
++ have aliases for terminal commands
++ let normal terminal commands through
+- create a way to make commands that install dependencies and git projects
+```
 ## Usage  
 * download cc.exe from [latest release](https://github.com/Skardyy/cc/releases/latest).  
 * add the dir that contains cc.exe into your path env variable.  
