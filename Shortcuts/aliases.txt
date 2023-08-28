@@ -1,7 +1,9 @@
 fx : firefox
 gn : GenshinImpact
 hsr : Honkai Star Rail
-aqw : Artix Game Launcher
+aqw : Artix Game Launcher ! async
 aqw-macro : aqw-macro
 dc : Discord
 dnb : discord-nino-bot
+fe : fzf : | : echo
+ef : fzf : | split-path : | : % { code $_ }

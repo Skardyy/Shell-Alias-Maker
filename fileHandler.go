@@ -16,8 +16,13 @@ type shortcut struct {
 	target string
 	args   string
 }
+type Alias struct {
+	target string
+	args   []string
+	t      string
+}
 
-func getShortcutCmd(path string) (shortcut, bool) {
+func getShortcut(path string) (shortcut, bool) {
 	Lnk, err := lnk.File(path)
 
 	if err != nil {
@@ -52,7 +57,7 @@ func getShortcuts() map[string]shortcut {
 	var ShortcutFolder = fmt.Sprintf("%s\\Shortcuts", executablePath)
 
 	for _, s := range find(ShortcutFolder, ".lnk") {
-		var shortcut, ok = getShortcutCmd(s)
+		var shortcut, ok = getShortcut(s)
 
 		if !ok {
 			continue
@@ -69,34 +74,47 @@ func getShortcuts() map[string]shortcut {
 	return shortcuts
 }
 
-func getAliases() map[string]string {
+func getAliases() map[string]Alias {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 
-	file, err := os.Open(fmt.Sprintf("%s\\Shortcuts\\aliases.txt", executablePath))
+	var file, err = os.Open(fmt.Sprintf("%s\\Shortcuts\\aliases.txt", executablePath))
 	if err != nil {
 		log.Printf("Missing ~\\Shortcut\\aliases.txt")
 		return nil
 	}
 	defer file.Close()
 
-	var shortcuts map[string]string = make(map[string]string)
+	var aliases map[string]Alias = make(map[string]Alias)
 
-	scanner := bufio.NewScanner(file)
+	var scanner = bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, ":")
-		if len(parts) != 2 {
+
+		var line = scanner.Text()
+		var parts = strings.Split(line, "!")
+		var t string = ""
+		if len(parts) == 2 {
+			t = strings.ToLower(strings.TrimSpace(parts[1]))
+		}
+
+		parts = strings.Split(line, ":")
+		var length = len(parts)
+		if length < 2 {
 			// Skip lines that don't have the expected format
 			continue
 		}
 		name := strings.ToLower(strings.TrimSpace(parts[0]))
 		target := strings.ToLower(strings.TrimSpace(parts[1]))
-		shortcuts[name] = target
+
+		var args []string
+		if length > 2 {
+			args = parts[2:length]
+		}
+		aliases[name] = Alias{target, args, t}
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 		return nil
 	}
-	return shortcuts
+	return aliases
 }
