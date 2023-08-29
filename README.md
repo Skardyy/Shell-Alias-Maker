@@ -5,6 +5,9 @@
 + have aliases for terminal commands
 + let normal terminal commands through
 - create a way to make commands that install dependencies and git projects
+! change alias.txt to config.txt (more reasonable)  
+! add a [<shell>] to the top of config.txt to specify the shell to be used (helps for crossplatform)  
+! check why fe -a dosent work as a alias and fe-a does.  
 ```
 ## Usage  
 * download cc.exe from [latest release](https://github.com/Skardyy/cc/releases/latest).  

@@ -6,4 +6,5 @@ aqw-macro : aqw-macro ! async
 dc : Discord ! async
 dnb : discord-nino-bot ! async
 fe : fzf | scb
+fe-a : fzf | split-path | scb
 ef : fzf | split-path | % { code $_ }
