@@ -10,6 +10,12 @@
 ```
 ## Usage  
 * download cc.exe from [latest release](https://github.com/Skardyy/cc/releases/latest).  
+Or~  
+```diff
+git clone https://github.com/Skardyy/cc
+cd cc
+go build -ldflags "-s -w"
+```
 * add the dir that contains cc.exe into your path env variable.  
 * open your terminal, write cc, and you're done.  
 ### Important  
