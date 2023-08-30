@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io/fs"
 	"log"
@@ -96,8 +97,8 @@ func readConfig() (map[string]Alias, string) {
 	}
 
 	for scanner.Scan() {
-
-		var line = scanner.Text()
+		var byteSlice = scanner.Bytes()
+		var line = bytes.NewBuffer(byteSlice).String()
 		var parts = strings.Split(line, "!")
 		var t string = ""
 		if len(parts) == 2 {
@@ -112,7 +113,12 @@ func readConfig() (map[string]Alias, string) {
 		}
 
 		name := strings.ToLower(strings.TrimSpace(parts[0]))
-		target := strings.ToLower(strings.TrimSpace(parts[1]))
+		var target string
+		if t == "nolow" {
+			target = strings.TrimSpace(parts[1])
+		} else {
+			target = strings.ToLower(strings.TrimSpace(parts[1]))
+		}
 
 		aliases[name] = Alias{target, t}
 	}
