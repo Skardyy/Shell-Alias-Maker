@@ -74,19 +74,27 @@ func getShortcuts() map[string]shortcut {
 	return shortcuts
 }
 
-func getAliases() map[string]Alias {
+func readConfig() (map[string]Alias, string) {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	var shell = "Powershell"
 
-	var file, err = os.Open(fmt.Sprintf("%s\\Shortcuts\\aliases.txt", executablePath))
+	var file, err = os.Open(fmt.Sprintf("%s\\Shortcuts\\config.txt", executablePath))
 	if err != nil {
-		log.Printf("Missing ~\\Shortcut\\aliases.txt")
-		return nil
+		log.Printf("Missing ~\\Shortcut\\config.txt")
+		return nil, shell
 	}
 	defer file.Close()
 
 	var aliases map[string]Alias = make(map[string]Alias)
-
 	var scanner = bufio.NewScanner(file)
+
+	if scanner.Scan() {
+		var line = scanner.Text()
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			shell = strings.ToLower(strings.TrimSpace(line[1 : len(line)-1]))
+		}
+	}
+
 	for scanner.Scan() {
 
 		var line = scanner.Text()
@@ -111,7 +119,7 @@ func getAliases() map[string]Alias {
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
-		return nil
+		return nil, shell
 	}
-	return aliases
+	return aliases, shell
 }

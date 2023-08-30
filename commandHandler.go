@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-var aliases = getAliases()
+var aliases, shell = readConfig()
 var shortcuts = getShortcuts()
 
 // creates a cmd for the command, also gives a flag indicating to run async or not
@@ -28,7 +28,7 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 			return cmd, flag
 		}
 
-		var cmd = exec.Command("Powershell", alias.target)
+		var cmd = exec.Command(shell, alias.target)
 		var flag = alias.t == "async"
 
 		return cmd, flag
@@ -40,13 +40,13 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 		return cmd, false
 	}
 
-	var cmd = exec.Command("powershell", command)
+	var cmd = exec.Command(shell, command)
 	return cmd, false
 }
 
 // creates a cmd for a .lnk file
 func runLnk(lnkCmd shortcut) *exec.Cmd {
-	return exec.Command("powershell", "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
+	return exec.Command(shell, "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
 }
 
 // creates a cmd that echos all aliases and shortcuts
@@ -69,5 +69,5 @@ func echoCommands() *exec.Cmd {
 		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value.target + " " + value.args + "\n")
 	}
 
-	return exec.Command("powershell", "echo '"+buffer.String()+"'")
+	return exec.Command(shell, "echo '"+buffer.String()+"'")
 }
