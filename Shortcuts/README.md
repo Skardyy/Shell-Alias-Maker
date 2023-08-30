@@ -17,4 +17,4 @@ gn : Google chrome ! async
 ## Shell  
 in the config.txt you can specify the shell to use (defaults to powershell if no shell specifies)  
 simply put:  
-[<shell>] in the first line of config.txt
+"[<Shell>]" in the first line of config.txt
