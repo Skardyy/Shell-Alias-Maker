@@ -1,7 +1,7 @@
 ## CLI goals  
 ```diff
 + open apps by having a folder of shortcuts to those apps
-+ have a file called aliases.txt to alias to those apps
++ have a file called config.txt to alias to those apps
 + have aliases for terminal commands
 + let normal terminal commands through
 + add a way to spin different shells
