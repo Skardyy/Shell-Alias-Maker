@@ -5,13 +5,13 @@ names of the files will be inherited
 
 ## Aliases  
 you can write an config.txt file to create aliases to those shortcuts and commands  
-### alias to .lnk file  
+### alias to an app  
 fx : firefox 
 * the above is used to create a shortcut to an app called firefox  
 ### alias to terminal command  
 ef : fzf | split-path | % { code $_ }  
 * the above is used to create a shortcut to the command (with args):> fzf | split-path | % { code $_ }  
-### alias to a command + run async  
+### alias to a command/app + run async  
 gn : Google chrome ! async  
 * the above is used to create a shortcut to a app and specifies it to run it async  
 ## Shell  
