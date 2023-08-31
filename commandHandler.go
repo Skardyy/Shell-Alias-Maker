@@ -9,7 +9,7 @@ import (
 )
 
 var aliases, shell = readConfig()
-var shortcuts = getShortcuts()
+var apps = getApps()
 
 // creates a cmd for the command, also gives a flag indicating to run async or not
 func handleCommand(command string) (*exec.Cmd, bool) {
@@ -21,9 +21,9 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 	command = strings.ToLower(command)
 	var alias, okAlias = aliases[command]
 	if okAlias {
-		var shortcut, okShortcut = shortcuts[alias.target]
-		if okShortcut {
-			var cmd = runLnk(shortcut)
+		var app, okApp = apps[alias.target]
+		if okApp {
+			var cmd = runApp(app)
 			var flag = alias.t == "async"
 			return cmd, flag
 		}
@@ -34,9 +34,9 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 		return cmd, flag
 	}
 
-	var shortcut, okShortcut = shortcuts[command]
-	if okShortcut {
-		var cmd = runLnk(shortcut)
+	var app, okApp = apps[command]
+	if okApp {
+		var cmd = runApp(app)
 		return cmd, false
 	}
 
@@ -45,8 +45,8 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 }
 
 // creates a cmd for a .lnk file
-func runLnk(lnkCmd shortcut) *exec.Cmd {
-	return exec.Command(shell, "&", fmt.Sprintf("'%s'", lnkCmd.target), lnkCmd.args)
+func runApp(appTarget string) *exec.Cmd {
+	return exec.Command(shell, ". ", fmt.Sprintf(`'%s'`, appTarget))
 }
 
 // creates a cmd that echos all aliases and shortcuts
@@ -64,9 +64,9 @@ func echoCommands() *exec.Cmd {
 		}
 		buffer.WriteString(str)
 	}
-	for key, value := range shortcuts {
+	for key, value := range apps {
 		counter++
-		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value.target + " " + value.args + "\n")
+		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value + "\n")
 	}
 
 	return exec.Command(shell, "echo '"+buffer.String()+"'")

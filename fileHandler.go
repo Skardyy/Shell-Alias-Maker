@@ -9,31 +9,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-
-	lnk "github.com/parsiya/golnk"
 )
 
-type shortcut struct {
-	target string
-	args   string
-}
 type Alias struct {
 	target string
 	t      string
-}
-
-// returns a shortcut and a flag indicating whatever the shortcut was found
-func getShortcut(path string) (shortcut, bool) {
-	Lnk, err := lnk.File(path)
-
-	if err != nil {
-		fmt.Println("Error opening file:", err)
-		return shortcut{}, false
-	}
-
-	var cmd = Lnk.LinkInfo.LocalBasePath
-	var args = Lnk.StringData.CommandLineArguments
-	return shortcut{target: cmd, args: args}, true
 }
 
 // find a file with the given extension in the given root folder
@@ -51,37 +31,43 @@ func find(root, ext string) []string {
 	return a
 }
 
-func getShortcuts() map[string]shortcut {
-	var shortcuts map[string]shortcut = make(map[string]shortcut)
+func getApps() map[string]string {
+	var apps map[string]string = make(map[string]string)
 
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var ShortcutFolder = fmt.Sprintf("%s\\Shortcuts", executablePath)
+	var appsFolder = fmt.Sprintf("%s\\Apps", executablePath)
 
-	for _, s := range find(ShortcutFolder, ".lnk") {
-		var shortcut, ok = getShortcut(s)
-
-		if !ok {
-			continue
+	var err = filepath.Walk(appsFolder, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
 
-		fileName := filepath.Base(s)
-		extension := filepath.Ext(fileName)
-		nameWithoutExtension := fileName[:len(fileName)-len(extension)]
+		if !info.IsDir() {
+			var fileName = strings.ToLower(filepath.Base(path))
+			if fileName == "readme.md" || fileName == "config.txt" || fileName == "log.txt" {
+				return nil
+			}
+			extension := filepath.Ext(fileName)
+			nameWithoutExtension := fileName[:len(fileName)-len(extension)]
+			apps[nameWithoutExtension] = path
+		}
+		return nil
+	})
 
-		nameWithoutExtension = strings.ToLower(nameWithoutExtension)
-		shortcuts[nameWithoutExtension] = shortcut
+	if err != nil {
+		log.Printf("error walking the path %q: %v\n", appsFolder, err)
 	}
 
-	return shortcuts
+	return apps
 }
 
 func readConfig() (map[string]Alias, string) {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	var shell = "Powershell"
 
-	var file, err = os.Open(fmt.Sprintf("%s\\Shortcuts\\config.txt", executablePath))
+	var file, err = os.Open(fmt.Sprintf("%s\\Apps\\config.txt", executablePath))
 	if err != nil {
-		log.Printf("Missing ~\\Shortcut\\config.txt")
+		log.Println("Missing ~\\Apps\\config.txt")
 		return nil, shell
 	}
 	defer file.Close()
@@ -124,8 +110,18 @@ func readConfig() (map[string]Alias, string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return nil, shell
 	}
 	return aliases, shell
+}
+
+func setLoggerOutput() {
+	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
+	var filePath = fmt.Sprintf("%s\\Apps\\log.txt", executablePath)
+
+	file, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer file.Close()
+
+	log.SetOutput(file)
 }

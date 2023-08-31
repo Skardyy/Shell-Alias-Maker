@@ -10,6 +10,7 @@ import (
 
 func main() {
 
+	setLoggerOutput()
 	var initialModel = initialModel()
 
 	var dir, _ = os.UserHomeDir()

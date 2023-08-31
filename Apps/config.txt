@@ -1,0 +1,12 @@
+[Powershell]
+fx : firefox ! async
+gn : GenshinImpact ! async
+hsr : Honkai Star Rail ! async
+aqw : Artix Game Launcher ! async
+aqw-macro : aqw-macro ! async
+dc : Discord ! async
+dnb : discord-nino-bot ! async
+fe : fzf --preview "bat --color=always --theme=Dracula {}" | scb ! nolow
+de : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | scb ! nolow
+ed : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | % { code $_ } ! nolow
+ef : fzf --preview "bat --color=always --theme=Dracula {}" | % { code $_ } ! nolow
