@@ -1,5 +1,5 @@
-## Shortcuts  
-in order to use the shortcuts future, you need to add .lnk/.url/(any file that can be '. path\to\file') files into this folder.  
+## Apps  
+in order to add apps to cc, you need to add .lnk/.url/any file that can run by simply doing '. path\to\file' files into this folder.  
 the program will detect them on its own,  
 names of the files will be inherited  
 
