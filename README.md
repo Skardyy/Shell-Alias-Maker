@@ -5,6 +5,7 @@
 + have aliases for terminal commands
 + let normal terminal commands through
 + add a way to spin different shells
+- add a way to read all installed apps and use them as well (maybe even use them only if its good)
 - create a way to make commands that install dependencies and git projects
 ```
 ## Usage  
