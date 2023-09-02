@@ -1,5 +1,5 @@
 [Powershell]
-fx : firefox ! async
+vd : Vivaldi ! async
 gn : GenshinImpact ! async
 hsr : Honkai Star Rail ! async
 aqw : Artix Game Launcher ! async
