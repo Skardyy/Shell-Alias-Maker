@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +43,7 @@ func getApps() map[string]string {
 
 		if !info.IsDir() {
 			var fileName = strings.ToLower(filepath.Base(path))
-			if fileName == "readme.md" || fileName == "config.txt" || fileName == "log.txt" {
+			if fileName == "readme.md" || fileName == "config.txt" {
 				return nil
 			}
 			extension := filepath.Ext(fileName)
@@ -55,7 +54,7 @@ func getApps() map[string]string {
 	})
 
 	if err != nil {
-		log.Printf("error walking the path %q: %v\n", appsFolder, err)
+		fmt.Printf("error walking the path %q: %v\n", appsFolder, err)
 	}
 
 	return apps
@@ -67,7 +66,7 @@ func readConfig() (map[string]Alias, string) {
 
 	var file, err = os.Open(fmt.Sprintf("%s\\Apps\\config.txt", executablePath))
 	if err != nil {
-		log.Println("Missing ~\\Apps\\config.txt")
+		fmt.Println("Missing ~\\Apps\\config.txt")
 		return nil, shell
 	}
 	defer file.Close()
@@ -110,18 +109,8 @@ func readConfig() (map[string]Alias, string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return nil, shell
 	}
 	return aliases, shell
-}
-
-func setLoggerOutput() {
-	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var filePath = fmt.Sprintf("%s\\Apps\\log.txt", executablePath)
-
-	file, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer file.Close()
-
-	log.SetOutput(file)
 }

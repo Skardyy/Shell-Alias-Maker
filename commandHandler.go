@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -41,12 +42,19 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 	}
 
 	var cmd = exec.Command(shell, command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 	return cmd, false
 }
 
 // creates a cmd for a .lnk file
 func runApp(appTarget string) *exec.Cmd {
-	return exec.Command(shell, ". ", fmt.Sprintf(`'%s'`, appTarget))
+	var cmd = exec.Command(shell, ". ", fmt.Sprintf(`'%s'`, appTarget))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd
 }
 
 // creates a cmd that echos all aliases and shortcuts
@@ -69,5 +77,9 @@ func echoCommands() *exec.Cmd {
 		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value + "\n")
 	}
 
-	return exec.Command(shell, "echo '"+buffer.String()+"'")
+	var cmd = exec.Command(shell, "echo '"+buffer.String()+"'")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+	return cmd
 }
