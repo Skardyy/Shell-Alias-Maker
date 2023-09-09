@@ -1,10 +1,15 @@
 package main
 
 import (
+	"os"
+
 	"github.com/chzyer/readline"
 )
 
 func main() {
+	var dir, _ = os.UserHomeDir()
+	os.Chdir(dir)
+
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
