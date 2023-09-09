@@ -16,16 +16,10 @@ func main() {
 	var dir, _ = os.UserHomeDir()
 	os.Chdir(dir)
 
-	commands := []string{}
-
 	for {
 		line, err := rl.Readline()
 		if err != nil {
 			break
-		}
-
-		if len(line) > 0 {
-			commands = append(commands, line)
 		}
 
 		var cmd, async = handleCommand(line)

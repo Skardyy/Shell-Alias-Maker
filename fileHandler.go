@@ -15,21 +15,6 @@ type Alias struct {
 	t      string
 }
 
-// find a file with the given extension in the given root folder
-func find(root, ext string) []string {
-	var a []string
-	filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
-		if e != nil {
-			return e
-		}
-		if filepath.Ext(d.Name()) == ext {
-			a = append(a, s)
-		}
-		return nil
-	})
-	return a
-}
-
 func getApps() map[string]string {
 	var apps map[string]string = make(map[string]string)
 
