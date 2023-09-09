@@ -19,7 +19,7 @@ func getApps() map[string]string {
 	var apps map[string]string = make(map[string]string)
 
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var appsFolder = fmt.Sprintf("%s\\Apps", executablePath)
+	var appsFolder = filepath.Join(executablePath, "Apps")
 
 	var err = filepath.Walk(appsFolder, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -48,8 +48,9 @@ func getApps() map[string]string {
 func readConfig() (map[string]Alias, string) {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	var shell = "Powershell"
+	var appsFolder = filepath.Join(executablePath, "Apps")
 
-	var file, err = os.Open(fmt.Sprintf("%s\\Apps\\config.txt", executablePath))
+	var file, err = os.Open(filepath.Join(appsFolder, "config.txt"))
 	if err != nil {
 		fmt.Println("Missing ~\\Apps\\config.txt")
 		return nil, shell

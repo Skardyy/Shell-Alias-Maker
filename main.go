@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 
 	"github.com/chzyer/readline"
@@ -19,14 +20,17 @@ func main() {
 	for {
 		line, err := rl.Readline()
 		if err != nil {
-			break
+			log.Println(err)
 		}
 
 		var cmd, async = handleCommand(line)
 		if async {
 			go cmd.Run()
 		} else {
-			cmd.Run()
+			var err = cmd.Run()
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
 }
