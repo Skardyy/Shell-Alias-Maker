@@ -7,14 +7,14 @@ import (
 )
 
 func main() {
-	var dir, _ = os.UserHomeDir()
-	os.Chdir(dir)
-
 	rl, err := readline.New("> ")
 	if err != nil {
 		panic(err)
 	}
 	defer rl.Close()
+
+	var dir, _ = os.UserHomeDir()
+	os.Chdir(dir)
 
 	commands := []string{}
 

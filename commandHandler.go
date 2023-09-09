@@ -30,6 +30,9 @@ func handleCommand(command string) (*exec.Cmd, bool) {
 		}
 
 		var cmd = exec.Command(shell, alias.target)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
 		var flag = alias.t == "async"
 
 		return cmd, flag
