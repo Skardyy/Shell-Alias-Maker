@@ -20,7 +20,7 @@ func main() {
 	for {
 		line, err := rl.Readline()
 		if err != nil {
-			log.Println(err)
+			os.Exit(0)
 		}
 
 		var cmd, async = handleCommand(line)
