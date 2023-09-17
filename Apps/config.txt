@@ -1,4 +1,4 @@
-[Powershell]
+[pwsh]
 vd : Vivaldi ! async
 gn : GenshinImpact ! async
 hsr : Honkai Star Rail ! async

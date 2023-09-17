@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 )
@@ -12,56 +10,57 @@ import (
 var aliases, shell = readConfig()
 var apps = getApps()
 
-// creates a cmd for the command, also gives a flag indicating to run async or not
-func handleCommand(command string) (*exec.Cmd, bool) {
+// creates a cmd for the command
+func handleCommand(command string) (cmd string, handled bool) {
 	if command == "?" {
 		var cmd = echoCommands()
-		return cmd, false
+		return cmd, true
 	}
 
 	command = strings.ToLower(command)
 	var alias, okAlias = aliases[command]
 	if okAlias {
+		//app alias
 		var app, okApp = apps[alias.target]
 		if okApp {
-			var cmd = runApp(app)
 			var flag = alias.t == "async"
-			return cmd, flag
+			var cmd = runApp(app, flag)
+			return cmd, true
 		}
 
-		var cmd = exec.Command(shell, alias.target)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
+		//cmd alias
 		var flag = alias.t == "async"
-
-		return cmd, flag
+		var cmd = getRunner(flag) + alias.target
+		return cmd, true
 	}
 
 	var app, okApp = apps[command]
 	if okApp {
-		var cmd = runApp(app)
-		return cmd, false
+		var cmd = runApp(app, false)
+		return cmd, true
 	}
 
-	var cmd = exec.Command(shell, command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd, false
+	//not handled
+	return "", false
 }
 
 // creates a cmd for a .lnk file
-func runApp(appTarget string) *exec.Cmd {
-	var cmd = exec.Command(shell, ". ", fmt.Sprintf(`'%s'`, appTarget))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd
+func runApp(appTarget string, async bool) string {
+	return getRunner(async) + fmt.Sprintf(`'%s'`, appTarget)
+}
+
+func getRunner(async bool) string {
+	var runner string
+	if async {
+		runner = "& "
+	} else {
+		runner = ". "
+	}
+	return runner
 }
 
 // creates a cmd that echos all aliases and shortcuts
-func echoCommands() *exec.Cmd {
+func echoCommands() string {
 	var buffer bytes.Buffer
 	var counter = 0
 
@@ -80,9 +79,5 @@ func echoCommands() *exec.Cmd {
 		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value + "\n")
 	}
 
-	var cmd = exec.Command(shell, "echo '"+buffer.String()+"'")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd
+	return "echo '" + buffer.String() + "'" + "\n"
 }

@@ -1,36 +1,34 @@
 package main
 
 import (
-	"log"
+	"bufio"
+	"io"
 	"os"
-
-	"github.com/chzyer/readline"
+	"os/exec"
 )
 
 func main() {
-	rl, err := readline.New("> ")
-	if err != nil {
-		panic(err)
-	}
-	defer rl.Close()
+	pr, pw := io.Pipe()
+	cmd := exec.Command(shell)
 
-	var dir, _ = os.UserHomeDir()
-	os.Chdir(dir)
+	defer cmd.Wait()
+	defer pw.Close()
 
-	for {
-		line, err := rl.Readline()
-		if err != nil {
-			os.Exit(0)
-		}
+	cmd.Stdin = pr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Start()
 
-		var cmd, async = handleCommand(line)
-		if async {
-			go cmd.Run()
+	//read stdin from the shell
+	userScanner := bufio.NewScanner(os.Stdin)
+	for userScanner.Scan() {
+		input := userScanner.Text()
+
+		cmd, handled := handleCommand(input)
+		if !handled {
+			pw.Write([]byte(input + "\n"))
 		} else {
-			var err = cmd.Run()
-			if err != nil {
-				log.Println(err)
-			}
+			pw.Write([]byte(cmd + "\n"))
 		}
 	}
 }
