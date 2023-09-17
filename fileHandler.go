@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,26 +15,11 @@ type Alias struct {
 	t      string
 }
 
-// find a file with the given extension in the given root folder
-func find(root, ext string) []string {
-	var a []string
-	filepath.WalkDir(root, func(s string, d fs.DirEntry, e error) error {
-		if e != nil {
-			return e
-		}
-		if filepath.Ext(d.Name()) == ext {
-			a = append(a, s)
-		}
-		return nil
-	})
-	return a
-}
-
 func getApps() map[string]string {
 	var apps map[string]string = make(map[string]string)
 
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var appsFolder = fmt.Sprintf("%s\\Apps", executablePath)
+	var appsFolder = filepath.Join(executablePath, "Apps")
 
 	var err = filepath.Walk(appsFolder, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -44,7 +28,7 @@ func getApps() map[string]string {
 
 		if !info.IsDir() {
 			var fileName = strings.ToLower(filepath.Base(path))
-			if fileName == "readme.md" || fileName == "config.txt" || fileName == "log.txt" {
+			if fileName == "readme.md" || fileName == "config.txt" {
 				return nil
 			}
 			extension := filepath.Ext(fileName)
@@ -55,7 +39,7 @@ func getApps() map[string]string {
 	})
 
 	if err != nil {
-		log.Printf("error walking the path %q: %v\n", appsFolder, err)
+		fmt.Printf("error walking the path %q: %v\n", appsFolder, err)
 	}
 
 	return apps
@@ -64,10 +48,11 @@ func getApps() map[string]string {
 func readConfig() (map[string]Alias, string) {
 	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
 	var shell = "Powershell"
+	var appsFolder = filepath.Join(executablePath, "Apps")
 
-	var file, err = os.Open(fmt.Sprintf("%s\\Apps\\config.txt", executablePath))
+	var file, err = os.Open(filepath.Join(appsFolder, "config.txt"))
 	if err != nil {
-		log.Println("Missing ~\\Apps\\config.txt")
+		fmt.Println("Missing ~\\Apps\\config.txt")
 		return nil, shell
 	}
 	defer file.Close()
@@ -110,18 +95,8 @@ func readConfig() (map[string]Alias, string) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return nil, shell
 	}
 	return aliases, shell
-}
-
-func setLoggerOutput() {
-	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var filePath = fmt.Sprintf("%s\\Apps\\log.txt", executablePath)
-
-	file, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer file.Close()
-
-	log.SetOutput(file)
 }

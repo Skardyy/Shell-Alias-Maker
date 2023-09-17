@@ -1,91 +1,34 @@
 package main
 
 import (
-	"fmt"
+	"bufio"
+	"io"
 	"os"
-
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
+	"os/exec"
 )
 
 func main() {
+	pr, pw := io.Pipe()
+	cmd := exec.Command(shell)
 
-	setLoggerOutput()
-	var initialModel = initialModel()
+	defer cmd.Wait()
+	defer pw.Close()
 
-	var dir, _ = os.UserHomeDir()
-	os.Chdir(dir)
+	cmd.Stdin = pr
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Start()
 
-	if _, err := tea.NewProgram(&initialModel).Run(); err != nil {
-		panic(err)
-	}
-}
+	//read stdin from the shell
+	userScanner := bufio.NewScanner(os.Stdin)
+	for userScanner.Scan() {
+		input := userScanner.Text()
 
-func initialModel() Model {
-	var t = createTextInput("?")
-
-	var model = Model{
-		inputField:    t,
-		typingCommand: true,
-	}
-
-	return model
-}
-
-type Model struct {
-	inputField *textinput.Model
-
-	typingCommand bool
-
-	cmd string
-}
-
-func (m *Model) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink)
-}
-
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "enter":
-			if m.typingCommand {
-				var cmd = m.handleCmd(m.inputField.Value())
-				m.inputField.SetValue("")
-				return m, cmd
-			}
-			return m, nil
+		cmd, handled := handleCommand(input)
+		if !handled {
+			pw.Write([]byte(input + "\n"))
+		} else {
+			pw.Write([]byte(cmd + "\n"))
 		}
 	}
-	if m.typingCommand {
-		var inputField, cmd = m.inputField.Update(msg)
-		m.inputField = &inputField
-		return m, cmd
-	}
-
-	return m, nil
-}
-
-func (m *Model) View() string {
-	if m.typingCommand {
-		return fmt.Sprintf("CC %s\n", m.inputField.View())
-	}
-
-	return ""
-}
-
-func (m *Model) handleCmd(cmd string) tea.Cmd {
-	if cmd == "cc" {
-		return nil
-	}
-
-	var command, async = handleCommand(cmd)
-	if async {
-		go command.Run()
-		return nil
-	}
-
-	return tea.ExecProcess(command, nil)
 }

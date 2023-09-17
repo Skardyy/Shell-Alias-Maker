@@ -7,7 +7,7 @@
 + add a way to spin different shells
 - add a way to read all installed apps and use them as well (maybe even use them only if its good)  
 - add a reload cmd like ?  
-- create a way to make commands that install dependencies and git projects
+- make a way to fetch init commands that install things  
 ```
 ## Usage  
 * download cc.exe from [latest release](https://github.com/Skardyy/cc/releases/latest).  
