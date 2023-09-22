@@ -1,12 +1,12 @@
-[pwsh]
-vd : Vivaldi ! async
-gn : GenshinImpact ! async
-hsr : Honkai Star Rail ! async
-aqw : Artix Game Launcher ! async
-aqw-macro : aqw-macro ! async
-dc : Discord ! async
-dnb : discord-nino-bot ! async
-fe : fzf --preview "bat --color=always --theme=Dracula {}" | scb ! nolow
-de : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | scb ! nolow
-ed : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | % { code $_ } ! nolow
-ef : fzf --preview "bat --color=always --theme=Dracula {}" | % { code $_ } ! nolow
+[C:\Users\meron\Documents\PowerShell\Microsoft.PowerShell_profile.ps1]
+vd : Vivaldi ! &
+gn : GenshinImpact ! &
+hsr : Honkai Star Rail ! &
+aqw : Artix Game Launcher ! &
+aqw-macro : aqw-macro ! &
+dc : Discord ! &
+dnb : discord-nino-bot ! &
+fe : fzf --preview "bat --color=always --theme=Dracula {}" | scb
+de : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | scb
+ed : fzf --preview "bat --color=always --theme=Dracula {}" | split-path | % { code $_ }
+ef : fzf --preview "bat --color=always --theme=Dracula {}" | % { code $_ }

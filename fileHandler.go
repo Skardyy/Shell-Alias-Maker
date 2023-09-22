@@ -7,21 +7,36 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
-type Alias struct {
-	target string
-	t      string
+var aliases, shellConfigPath = readConfig()
+var apps = getApps()
+
+func echoAliases() string {
+	var buffer bytes.Buffer
+	var counter = 0
+
+	for key, value := range aliases {
+		counter++
+		var str = strconv.Itoa(counter) + ". " + key + " : " + value + "\n"
+		buffer.WriteString(str)
+	}
+	for key, value := range apps {
+		counter++
+		buffer.WriteString(strconv.Itoa(counter) + ". " + key + " : " + value + "\n")
+	}
+
+	return buffer.String()
 }
 
 func getApps() map[string]string {
 	var apps map[string]string = make(map[string]string)
 
-	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var appsFolder = filepath.Join(executablePath, "Apps")
+	dir := getConfigDirPath()
 
-	var err = filepath.Walk(appsFolder, func(path string, info fs.FileInfo, err error) error {
+	var err = filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -39,44 +54,36 @@ func getApps() map[string]string {
 	})
 
 	if err != nil {
-		fmt.Printf("error walking the path %q: %v\n", appsFolder, err)
+		fmt.Printf("error walking the path %q: %v\n", dir, err)
 	}
 
 	return apps
 }
 
-func readConfig() (map[string]Alias, string) {
-	var executablePath, _ = filepath.Abs(filepath.Dir(os.Args[0]))
-	var shell = "Powershell"
-	var appsFolder = filepath.Join(executablePath, "Apps")
+// reads the config file to return the a: aliases and sc: shellConfig path
+func readConfig() (a map[string]string, sc string) {
 
-	var file, err = os.Open(filepath.Join(appsFolder, "config.txt"))
-	if err != nil {
-		fmt.Println("Missing ~\\Apps\\config.txt")
-		return nil, shell
-	}
+	file := getConfigFile()
 	defer file.Close()
 
-	var aliases map[string]Alias = make(map[string]Alias)
+	var aliases map[string]string = make(map[string]string)
 	var scanner = bufio.NewScanner(file)
 
+	var shellConfigPath string
 	if scanner.Scan() {
 		var line = scanner.Text()
 		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			shell = strings.ToLower(strings.TrimSpace(line[1 : len(line)-1]))
+			shellConfigPath = strings.ToLower(strings.TrimSpace(line[1 : len(line)-1]))
+		} else {
+			panic("Can't read from config file with wrong formating")
 		}
 	}
 
 	for scanner.Scan() {
 		var byteSlice = scanner.Bytes()
 		var line = bytes.NewBuffer(byteSlice).String()
-		var parts = strings.Split(line, "!")
-		var t string = ""
-		if len(parts) == 2 {
-			t = strings.ToLower(strings.TrimSpace(parts[1]))
-		}
 
-		parts = strings.Split(parts[0], ":")
+		parts := strings.Split(line, ":")
 		var length = len(parts)
 		if length != 2 {
 			// Skip lines that don't have the expected format
@@ -84,19 +91,95 @@ func readConfig() (map[string]Alias, string) {
 		}
 
 		name := strings.ToLower(strings.TrimSpace(parts[0]))
-		var target string
-		if t == "nolow" {
-			target = strings.TrimSpace(parts[1])
-		} else {
-			target = strings.ToLower(strings.TrimSpace(parts[1]))
-		}
+		target := strings.ToLower(strings.TrimSpace(parts[1]))
 
-		aliases[name] = Alias{target, t}
+		aliases[name] = target
 	}
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println(err)
-		return nil, shell
+		return nil, ""
 	}
-	return aliases, shell
+
+	return aliases, shellConfigPath
+}
+
+// returns the path to cc config files
+func getConfigDirPath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+	return filepath.Join(home, ".cc")
+}
+func getConfigFilePath() string {
+	dirPath := getConfigDirPath()
+	return filepath.Join(dirPath, "config.txt")
+}
+
+func createConfigDir() {
+	dirPath := getConfigDirPath()
+
+	err := os.MkdirAll(dirPath, os.ModePerm)
+	if err != nil {
+		fmt.Println("error creating ~/.cc dir")
+		panic(err)
+	}
+}
+
+func getConfigFile() *os.File {
+	createConfigDir()
+
+	filePath := getConfigFilePath()
+	return getFile(filePath)
+}
+
+func getFile(filePath string) *os.File {
+	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		panic(err)
+	}
+	return file
+}
+
+func replaceFilePartition(del string, content []string, file *os.File) {
+	scanner := bufio.NewScanner(file)
+	var normalText []string
+	insideDel := false
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, del) {
+			insideDel = true
+		} else if insideDel && strings.HasSuffix(line, del) {
+			insideDel = false
+		} else if !insideDel {
+			normalText = append(normalText, line)
+		}
+	}
+
+	normalText = append(normalText, content...)
+	finalText := strings.Join(normalText, "\n")
+	finalText = del + "\n" + finalText + "\n" + del
+	clearFile(file)
+
+	_, err := file.Write([]byte(finalText))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func clearFile(file *os.File) {
+	err := file.Truncate(0)
+	if err != nil {
+		panic(err)
+	}
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func walkBaseDir(baseDir string, suffixes []string, recursive bool) []Alias {
+
 }
