@@ -34,6 +34,7 @@ func echoAliases() string {
 	return buffer.String()
 }
 
+// get the apps inside ~/.cc
 func getApps() (map[string]string, error) {
 	var apps map[string]string = make(map[string]string)
 
@@ -68,7 +69,6 @@ func getApps() (map[string]string, error) {
 
 // reads the config file to return the a: aliases and sc: shellConfig path
 func readConfig() (a map[string]string, sc string, err error) {
-
 	file, err := getConfigFile()
 	if err != nil {
 		return nil, "", err
@@ -78,6 +78,7 @@ func readConfig() (a map[string]string, sc string, err error) {
 	var aliases map[string]string = make(map[string]string)
 	var scanner = bufio.NewScanner(file)
 
+	//searches for shell config file path
 	var shellConfigPath string
 	correctFormat := false
 	for scanner.Scan() {
@@ -92,6 +93,7 @@ func readConfig() (a map[string]string, sc string, err error) {
 		panic("Can't read from config file with wrong formating")
 	}
 
+	//reads the rest of the file
 	for scanner.Scan() {
 		var byteSlice = scanner.Bytes()
 		var line = bytes.NewBuffer(byteSlice).String()
@@ -117,7 +119,7 @@ func readConfig() (a map[string]string, sc string, err error) {
 	return aliases, shellConfigPath, nil
 }
 
-// returns the path to cc config files
+// returns ~/.cc
 func getConfigDirPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -125,6 +127,8 @@ func getConfigDirPath() (string, error) {
 	}
 	return filepath.Join(home, ".cc"), nil
 }
+
+// returns ~/.cc/config.txt
 func getConfigFilePath() (string, error) {
 	dirPath, err := getConfigDirPath()
 	if err != nil {
@@ -133,6 +137,7 @@ func getConfigFilePath() (string, error) {
 	return filepath.Join(dirPath, "config.txt"), nil
 }
 
+// creates ~/.cc if dosen't exists
 func createConfigDir() error {
 	dirPath, err := getConfigDirPath()
 	if err != nil {
@@ -148,6 +153,7 @@ func createConfigDir() error {
 	return nil
 }
 
+// returns a file pointing to ~/.cc/config.txt
 func getConfigFile() (*os.File, error) {
 	createConfigDir()
 
@@ -158,6 +164,7 @@ func getConfigFile() (*os.File, error) {
 	return getFile(filePath)
 }
 
+// returns a file opened using rd|wr|create|0644 flags
 func getFile(filePath string) (*os.File, error) {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -166,6 +173,7 @@ func getFile(filePath string) (*os.File, error) {
 	return file, nil
 }
 
+// replaces/adds the content between the del in the file with content
 func replaceFilePartition(del string, file *os.File, add bool, content ...string) error {
 	scanner := bufio.NewScanner(file)
 	var buffer bytes.Buffer
@@ -197,6 +205,7 @@ func replaceFilePartition(del string, file *os.File, add bool, content ...string
 	return nil
 }
 
+// walks the baseDir (can be recursive) to returns all the files ending with 1 of the suffixes
 func walkBaseDir(baseDir string, suffixes []string, recursive bool) ([]Alias, error) {
 	aliases := make([]Alias, 0)
 
@@ -230,112 +239,48 @@ func containsExt(ext string, exts []string) bool {
 	return false
 }
 
-// better use replace file partition as its more delicate
-func changeConfigFileContent(newShellConfigPath string, content string, add bool, file *os.File) error {
+// adds [path/to/shellConfigFile] to the start of file
+func initConfig(newShellConfigPath string, file *os.File) error {
 	var buffer bytes.Buffer
-
 	scanner := bufio.NewScanner(file)
 
 	//shell config file changing
-	if scanner.Scan() {
+	changed := false
+	var tempBuffer bytes.Buffer
+	for scanner.Scan() {
 		line := scanner.Text()
-		if newShellConfigPath != "" {
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
 			buffer.WriteString("[" + newShellConfigPath + "]" + "\n")
+			changed = true
+			break
 		} else {
-			buffer.WriteString(line + "\n")
-		}
-	} else {
-		buffer.WriteString("[" + newShellConfigPath + "]" + "\n")
-	}
-
-	//replacing the content of the file
-	if content == "" || add {
-		for scanner.Scan() {
-			line := scanner.Text()
-			buffer.WriteString(line + "\n")
-		}
-		if err := scanner.Err(); err != nil {
-			return err
+			tempBuffer.WriteString(line + "\n")
 		}
 	}
-	if add || content != "" {
-		buffer.WriteString(content)
+	if !changed {
+		buffer.WriteString(newShellConfigPath + "\n")
+	}
+	if tempBuffer.Len() != 0 {
+		buffer.Write(tempBuffer.Bytes())
 	}
 
-	file.Close()
-
+	//adding back the content
+	for scanner.Scan() {
+		line := scanner.Text()
+		buffer.WriteString(line + "\n")
+	}
 	if err := scanner.Err(); err != nil {
 		return err
 	}
-	configFilePath, err := getConfigFilePath()
-	if err != nil {
-		return err
-	}
+
+	file.Close()
 	checkedString := checkDup(buffer)
-	err = os.WriteFile(configFilePath, []byte(checkedString), os.ModePerm)
+	err := os.WriteFile(file.Name(), []byte(checkedString), os.ModePerm)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func amendApps() error {
-	file, err := getConfigFile()
-	if err != nil {
-		return err
-	}
-	var buffer bytes.Buffer
-	for k, v := range apps {
-		buffer.WriteString(k + " : " + v + "\n")
-	}
-
-	return replaceFilePartition("#Apps", file, false, buffer.String())
-}
-
-func checkDup(buffer bytes.Buffer) string {
-	slice := make([]string, 0)
-	tokens := strings.Split(buffer.String(), "\n")
-	for _, v := range tokens {
-		if slices.Contains(slice, v) {
-			if !strings.HasPrefix(v, "#") {
-				continue
-			}
-		}
-		if v != "" {
-			slice = append(slice, v)
-		}
-	}
-	return strings.Join(slice, "\n")
-}
-
-func getPopulatedShellParser() ShellConfigParser {
-	parser := ShellConfigParser{}
-	parser.With(shellConfigPath, &PwshConfigParsser{})
-
-	for k, v := range apps {
-		parser.Add(Alias{k, v})
-	}
-	for k, v := range aliases {
-		noSpace := strings.Replace(v, " ", "-", -1)
-		app, exists := apps[noSpace]
-		if exists {
-			parser.Add(Alias{k, app})
-		} else {
-			parser.Add(Alias{k, v})
-		}
-	}
-
-	return parser
-}
-
-func storePath(src string) (dstName string, err error) {
-	dst, err := getConfigDirPath()
-	if err != nil {
-		return "", err
-	}
-
-	return copyFile(src, dst)
 }
 
 func copyFile(src string, dstDir string) (dstName string, err error) {
@@ -358,4 +303,64 @@ func copyFile(src string, dstDir string) (dstName string, err error) {
 	}
 
 	return newPath, dstFile.Sync()
+}
+
+func storePath(src string) (dstName string, err error) {
+	dst, err := getConfigDirPath()
+	if err != nil {
+		return "", err
+	}
+
+	return copyFile(src, dst)
+}
+
+func populateShellParser() ShellConfigParser {
+	parser := ShellConfigParser{}
+	// ---------- PowerShell file parser ----------
+	parser.With(shellConfigPath, &PwshConfigParsser{})
+	// ---------- PowerShell file parser ----------
+
+	for k, v := range apps {
+		parser.Add(Alias{k, v})
+	}
+	for k, v := range aliases {
+		noSpace := strings.Replace(v, " ", "-", -1)
+		app, exists := apps[noSpace]
+		if exists {
+			parser.Add(Alias{k, app})
+		} else {
+			parser.Add(Alias{k, v})
+		}
+	}
+
+	return parser
+}
+
+func checkDup(buffer bytes.Buffer) string {
+	slice := make([]string, 0)
+	tokens := strings.Split(buffer.String(), "\n")
+	for _, v := range tokens {
+		if slices.Contains(slice, v) {
+			if !strings.HasPrefix(v, "#") {
+				continue
+			}
+		}
+		if v != "" {
+			slice = append(slice, v)
+		}
+	}
+	return strings.Join(slice, "\n")
+}
+
+func amendApps() error {
+	file, err := getConfigFile()
+	if err != nil {
+		return err
+	}
+	var buffer bytes.Buffer
+	for k, v := range apps {
+		buffer.WriteString(k + " : " + v + "\n")
+	}
+
+	return replaceFilePartition("#Apps", file, false, buffer.String())
 }

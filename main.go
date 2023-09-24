@@ -109,7 +109,7 @@ func Init(newShellConfigPath string) error {
 	if err != nil {
 		return err
 	}
-	err = changeConfigFileContent(newShellConfigPath, "", false, file)
+	err = initConfig(newShellConfigPath, file)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func amend(s string) error {
 	if err != nil {
 		panic(err)
 	}
-	parser := getPopulatedShellParser()
+	parser := populateShellParser()
 	return parser.confirm()
 }
 func clear(s string) error {

@@ -6,7 +6,7 @@ Or ~
 ```diff
 git clone https://github.com/Skardyy/cc
 cd cc
-go build -ldflags "-s -w"
+go build
 ```
 * start by doing ./cc.exe -help to see the commands
 ## Config  
@@ -21,10 +21,10 @@ fx : firefox
 alias : original_name
 fe : fzf --preview "bat --color=always --theme=Dracula {}"
 ```  
+in the above you can see aliases can be created to apps inside the .cc folder or even to full commands used in the shell  
 * the [] in the start of the file contains the path to the shellConfigFile.  
-you can change it by simply changing it in file or doing the cc -init again and giving it the path arg ($profile | cc -init)
+you can change it by simply changing it in file or doing the cc -init again and giving it the path arg (cc -init $profile)  
+* for other commands simply do cc -h to see a quick description of them.  
 
-# TODO:  
-* read from the config.txt file, populate the shellParser and do the deed.  
-* finish all the bool funcs  
-* remove the apps folder (not needed anymore)
+## Cross-platform / shell compatiblity  
+in order to support new shells, all need to be done is to creat a new struct that implments the ShellParser interface, then in mFile -> populateShellParser, change to the desired shell parser. switch between goos.os is possible as well for different shells according to need.

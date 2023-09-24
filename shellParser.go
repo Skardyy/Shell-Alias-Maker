@@ -40,6 +40,9 @@ func (scp *ShellConfigParser) confirm() error {
 	return nil
 }
 
+// -------------------- create new config parsers to support more shells --------------------
+
+// ---------- PowerShell file parser ----------
 type PwshConfigParsser struct {
 }
 
@@ -51,3 +54,5 @@ func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
 func (psp *PwshConfigParsser) GetPartitionDel() string {
 	return "#CC"
 }
+
+// ---------- PowerShell file parser ----------
