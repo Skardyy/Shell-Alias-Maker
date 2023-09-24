@@ -28,15 +28,23 @@ func (scp *ShellConfigParser) Add(aliases ...Alias) {
 		scp.partitionedContent = scp.ShellParser.Add(scp.partitionedContent, a)
 	}
 }
-func (scp *ShellConfigParser) confirm() {
-	replaceFilePartition(scp.ShellParser.GetPartitionDel(), scp.partitionedContent, getFile(scp.shellConfigPath))
+func (scp *ShellConfigParser) confirm() error {
+	file, err := getFile(scp.shellConfigPath)
+	if err != nil {
+		return err
+	}
+	err = replaceFilePartition(scp.ShellParser.GetPartitionDel(), file, false, scp.partitionedContent...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type PwshConfigParsser struct {
 }
 
 func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
-	newValue := "\n" + "New-Alias -Name " + alias.name + " -Value " + alias.target + " #" + alias.name
+	newValue := "\nfunction " + alias.name + " { " + alias.target + " }"
 	content = append(content, newValue)
 	return content
 }
