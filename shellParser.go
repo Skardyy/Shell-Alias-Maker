@@ -40,6 +40,14 @@ func (scp *ShellConfigParser) confirm() error {
 	return nil
 }
 
+func getDynShellParser() ShellConfigParser {
+	//---------- here give other code different parsers ----------
+	// can switch between goos.os for different ones
+	parser := ShellConfigParser{}
+	parser.With(shellConfigPath, &PwshConfigParsser{})
+	return parser
+}
+
 // -------------------- create new config parsers to support more shells --------------------
 
 // ---------- PowerShell file parser ----------
@@ -52,7 +60,7 @@ func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
 	return content
 }
 func (psp *PwshConfigParsser) GetPartitionDel() string {
-	return "#CC"
+	return "#SAM"
 }
 
 // ---------- PowerShell file parser ----------

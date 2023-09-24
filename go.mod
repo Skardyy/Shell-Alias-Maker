@@ -1,4 +1,4 @@
-module cc
+module sam
 
 go 1.21
 

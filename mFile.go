@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -34,7 +35,7 @@ func echoAliases() string {
 	return buffer.String()
 }
 
-// get the apps inside ~/.cc
+// get the apps inside ~/.sam
 func getApps() (map[string]string, error) {
 	var apps map[string]string = make(map[string]string)
 
@@ -90,7 +91,7 @@ func readConfig() (a map[string]string, sc string, err error) {
 		}
 	}
 	if !correctFormat {
-		panic("Can't read from config file with wrong formating")
+		return nil, "", errors.New("wrong format at ~/.sam/.config.txt")
 	}
 
 	//reads the rest of the file
@@ -119,16 +120,16 @@ func readConfig() (a map[string]string, sc string, err error) {
 	return aliases, shellConfigPath, nil
 }
 
-// returns ~/.cc
+// returns ~/.sam
 func getConfigDirPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".cc"), nil
+	return filepath.Join(home, ".sam"), nil
 }
 
-// returns ~/.cc/config.txt
+// returns ~/.sam/config.txt
 func getConfigFilePath() (string, error) {
 	dirPath, err := getConfigDirPath()
 	if err != nil {
@@ -137,7 +138,7 @@ func getConfigFilePath() (string, error) {
 	return filepath.Join(dirPath, "config.txt"), nil
 }
 
-// creates ~/.cc if dosen't exists
+// creates ~/.sam if dosen't exists
 func createConfigDir() error {
 	dirPath, err := getConfigDirPath()
 	if err != nil {
@@ -146,14 +147,14 @@ func createConfigDir() error {
 
 	err = os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
-		fmt.Println("error creating ~/.cc dir")
+		fmt.Println("error creating ~/.sam dir")
 		return err
 	}
 
 	return nil
 }
 
-// returns a file pointing to ~/.cc/config.txt
+// returns a file pointing to ~/.sam/config.txt
 func getConfigFile() (*os.File, error) {
 	createConfigDir()
 
@@ -182,7 +183,7 @@ func replaceFilePartition(del string, file *os.File, add bool, content ...string
 
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, del) {
+		if strings.HasPrefix(line, del) && !insideDel {
 			insideDel = true
 		} else if insideDel && strings.HasPrefix(line, del) {
 			insideDel = false
@@ -258,7 +259,7 @@ func initConfig(newShellConfigPath string, file *os.File) error {
 		}
 	}
 	if !changed {
-		buffer.WriteString(newShellConfigPath + "\n")
+		buffer.WriteString("[" + newShellConfigPath + "]" + "\n")
 	}
 	if tempBuffer.Len() != 0 {
 		buffer.Write(tempBuffer.Bytes())
@@ -315,10 +316,9 @@ func storePath(src string) (dstName string, err error) {
 }
 
 func populateShellParser() ShellConfigParser {
-	parser := ShellConfigParser{}
-	// ---------- PowerShell file parser ----------
-	parser.With(shellConfigPath, &PwshConfigParsser{})
-	// ---------- PowerShell file parser ----------
+	// ---------- gets shell parser ----------
+	parser := getDynShellParser()
+	// ---------- gets shell parse ----------
 
 	for k, v := range apps {
 		parser.Add(Alias{k, v})

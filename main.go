@@ -18,11 +18,11 @@ func main() {
 	aRecursive := aCmd.Bool("recursive", false, "should the app walk new dir found on baseDir")
 
 	gCmd = flag.NewFlagSet("get", flag.ExitOnError)
-	gDir := gCmd.Bool("dir", false, "gets the dir of all cc configs")
+	gDir := gCmd.Bool("dir", false, "gets the dir of all sam configs")
 	gAlias := gCmd.Bool("alias", false, "gets all the created aliases")
 
-	flag.BoolFunc("clear", "removes all the content cc created in the shell config file", clear)
-	flag.Func("init", "creates (if dosen't exists) a ~/.cc folder and inside of it config.txt file", Init)
+	flag.BoolFunc("clear", "removes all the content sam created in the shell config file", clear)
+	flag.Func("init", "creates (if dosen't exists) a ~/.sam folder and inside of it config.txt file", Init)
 	flag.BoolFunc("amend", "amends manually deleted/added apps to the config file\nthen amends the changes made in config.txt to the shellConfig file\n", amend)
 
 	flag.Usage = func() {
@@ -38,7 +38,7 @@ func main() {
 	flag.Parse()
 
 	if len(os.Args) < 2 {
-		fmt.Println("cc -h")
+		fmt.Println("sam -h")
 		os.Exit(0)
 	}
 
@@ -54,7 +54,7 @@ func main() {
 	case "-amend":
 	default:
 		fmt.Println(os.Args[1])
-		fmt.Println("\ncc -h")
+		fmt.Println("\nsam -h")
 		os.Exit(0)
 	}
 }
@@ -125,6 +125,6 @@ func amend(s string) error {
 	return parser.confirm()
 }
 func clear(s string) error {
-	parser := ShellConfigParser{}
+	parser := getDynShellParser()
 	return parser.confirm()
 }
