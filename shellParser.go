@@ -1,8 +1,8 @@
 package main
 
 type Alias struct {
-	name   string
-	target string
+	Name   string
+	Target string
 }
 
 type ShellConfigParser struct {
@@ -40,11 +40,11 @@ func (scp *ShellConfigParser) confirm() error {
 	return nil
 }
 
-func getDynShellParser() ShellConfigParser {
+func getDynShellParser(cf configFile) ShellConfigParser {
 	//---------- here give other code different parsers ----------
 	// can switch between goos.os for different ones
 	parser := ShellConfigParser{}
-	parser.With(shellConfigPath, &PwshConfigParsser{})
+	parser.With(cf.ShellConfigPath, &PwshConfigParsser{})
 	return parser
 }
 
@@ -55,7 +55,7 @@ type PwshConfigParsser struct {
 }
 
 func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
-	newValue := "\nfunction " + alias.name + " { " + alias.target + " }"
+	newValue := "\nfunction " + alias.Name + " { " + alias.Target + " }"
 	content = append(content, newValue)
 	return content
 }
