@@ -8,6 +8,7 @@ git clone https://github.com/Skardyy/Shell-Alias-Maker
 cd Shell-Alias-Maker
 go build
 ```
+* add the directory that contains sam.exe file into your env variables
 * start by doing ./sam.exe -h to see the commands
 * you must do sam -init before doing amend (sam must know where your shell config file is located)
 ## Config  

@@ -40,5 +40,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./sam.exe
-        asset_name: cc
+        asset_name: sam
         asset_content_type: application/octet-stream
