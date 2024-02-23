@@ -18,7 +18,10 @@ var apps, _ = getApps()
 
 func main() {
 	cf = configFile{}
-	_ = cf.readConfig()
+	err := cf.readConfig()
+	if err != nil {
+		fmt.Println("had a problem parsing the config file: ", err)
+	}
 
 	cCmd = flag.NewFlagSet("create", flag.ExitOnError)
 	cBaseDir := cCmd.String("baseDir", "~/desktop", "the base dir to walk from")
@@ -110,8 +113,8 @@ func printBr() {
 }
 
 func handleAdd(path *bool, alias *bool, args []string) {
-	if len(args) < 2 {
-		fmt.Println("missing args, check sam -h")
+	if len(args) < 2 || (!*path && !*alias) {
+		aCmd.PrintDefaults()
 		os.Exit(0)
 	}
 	key, target := args[0], args[1]
@@ -126,6 +129,7 @@ func handleAdd(path *bool, alias *bool, args []string) {
 		}
 		cf.Paths[key] = target
 		cf.writeConfig()
+		fmt.Println("please ammend to change the shell")
 	}
 	if *alias {
 		if _, flag := cf.Aliases[key]; flag {
@@ -144,7 +148,7 @@ func handleAdd(path *bool, alias *bool, args []string) {
 
 func handleRemove(path *bool, alias *bool, args []string) error {
 	if len(args) < 1 {
-		fmt.Println("missing args, check sam -h")
+		rCmd.PrintDefaults()
 		os.Exit(0)
 	}
 	key := args[0]
@@ -154,21 +158,26 @@ func handleRemove(path *bool, alias *bool, args []string) error {
 	if *alias {
 		delete(cf.Aliases, key)
 	}
-	return cf.writeConfig()
+	err := cf.writeConfig()
+	if err != nil {
+		return err
+	}
+	fmt.Println("please ammend to change the shell")
+	return nil
 }
 
-func handleCreate(baseDir *string, suffix *string, recursive *bool) {
+func handleCreate(baseDir *string, suffix *string, recursive *bool) error {
 	suffixes := strings.Split(*suffix, " ")
 	aliases, err := walkBaseDir(*baseDir, suffixes, *recursive)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	for key, target := range aliases {
 		if _, flag := cf.Aliases[key]; !flag {
 			newPath, err := storePath(target)
 			if err != nil {
-				panic(err)
+				return err
 			}
 			cf.Aliases[key] = newPath
 		} else {
@@ -178,16 +187,20 @@ func handleCreate(baseDir *string, suffix *string, recursive *bool) {
 
 	err = cf.writeConfig()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	fmt.Println("Please use the amend command to apply the changes")
+	return nil
 }
 
-func handleGet(dir *bool, alias *bool, paths *bool, apps *bool) {
+func handleGet(dir *bool, alias *bool, paths *bool, apps *bool) error {
+	if !*dir && !*alias && !*paths && !*apps {
+		gCmd.PrintDefaults()
+	}
 	if *dir {
 		path, err := getConfigDirPath()
 		if err != nil {
-			panic(err)
+			return err
 		}
 		fmt.Println(path)
 	}
@@ -200,6 +213,7 @@ func handleGet(dir *bool, alias *bool, paths *bool, apps *bool) {
 	if *apps {
 		fmt.Println(cf.echo(cf.Apps))
 	}
+	return nil
 }
 
 func Init(newShellConfigPath string) error {
@@ -214,7 +228,12 @@ func amend(s string) error {
 		return err
 	}
 	parser := populateShellParser(cf)
-	return parser.confirm()
+	err = parser.confirm()
+	if err != nil {
+		return err
+	}
+	fmt.Println("successfully amended, please rerun your shell config file")
+	return nil
 }
 func clear(s string) error {
 	parser := getDynShellParser(cf)
