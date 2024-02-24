@@ -85,7 +85,9 @@ func (cf *configFile) writeConfig() error {
 	if err != nil {
 		return err
 	}
-	_, err = io.WriteString(file, string(content))
+
+	file.Truncate(0)
+	_, err = file.Write(content)
 	if err != nil {
 		return err
 	}

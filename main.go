@@ -112,7 +112,7 @@ func printBr() {
 	fmt.Println(line)
 }
 
-func handleAdd(path *bool, alias *bool, args []string) {
+func handleAdd(path *bool, alias *bool, args []string) error {
 	if len(args) < 2 || (!*path && !*alias) {
 		aCmd.PrintDefaults()
 		os.Exit(0)
@@ -128,7 +128,10 @@ func handleAdd(path *bool, alias *bool, args []string) {
 			}
 		}
 		cf.Paths[key] = target
-		cf.writeConfig()
+		err := cf.writeConfig()
+		if err != nil {
+			return err
+		}
 		fmt.Println("please ammend to change the shell")
 	}
 	if *alias {
@@ -141,9 +144,13 @@ func handleAdd(path *bool, alias *bool, args []string) {
 			}
 		}
 		cf.Aliases[key] = target
-		cf.writeConfig()
+		err := cf.writeConfig()
+		if err != nil {
+			return err
+		}
 		fmt.Println("please ammend to change the shell")
 	}
+	return nil
 }
 
 func handleRemove(path *bool, alias *bool, args []string) error {
