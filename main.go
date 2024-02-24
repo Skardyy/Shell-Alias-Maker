@@ -147,7 +147,7 @@ func handleAdd(path *bool, alias *bool, args []string) {
 }
 
 func handleRemove(path *bool, alias *bool, args []string) error {
-	if len(args) < 1 {
+	if len(args) < 1 || (!*path && !*alias) {
 		rCmd.PrintDefaults()
 		os.Exit(0)
 	}
