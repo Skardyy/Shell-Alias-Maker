@@ -133,7 +133,6 @@ func handleAdd(path *bool, alias *bool, args []string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("please ammend to change the shell")
 	}
 	if *alias {
 		if _, flag := cf.Aliases[key]; flag {
