@@ -130,8 +130,8 @@ func getApps() (map[string]string, error) {
 		}
 
 		if !info.IsDir() {
-			var fileName = strings.ToLower(filepath.Base(path))
-			if fileName == "config.config" {
+			var fileName = filepath.Base(path)
+			if fileName == "config.json" {
 				return nil
 			}
 			extension := filepath.Ext(fileName)
@@ -210,6 +210,13 @@ func replaceFilePartition(del string, file *os.File, add bool, content ...string
 // walks the baseDir (can be recursive) to returns all the files ending with 1 of the suffixes
 func walkBaseDir(baseDir string, suffixes []string, recursive bool) (map[string]string, error) {
 	aliases := make(map[string]string)
+	if strings.HasPrefix(baseDir, "~/") {
+		userDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		baseDir = filepath.Join(userDir, baseDir[2:])
+	}
 
 	err := filepath.Walk(baseDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -243,7 +250,7 @@ func containsExt(ext string, exts []string) bool {
 
 // copies a file into another dir
 func copyFile(src string, dstDir string) (dstName string, err error) {
-	newPath := filepath.Join(dstDir, strings.Replace(filepath.Base(src), " ", "-", -1))
+	newPath := strings.ToLower(filepath.Join(dstDir, strings.Replace(filepath.Base(src), " ", "-", -1)))
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return "", err

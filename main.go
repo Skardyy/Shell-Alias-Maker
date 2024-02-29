@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"golang.org/x/term"
@@ -181,12 +182,14 @@ func handleCreate(baseDir *string, suffix *string, recursive *bool) error {
 	}
 
 	for key, target := range aliases {
-		if _, flag := cf.Aliases[key]; !flag {
+		if _, flag := cf.Apps[key]; !flag {
 			newPath, err := storePath(target)
 			if err != nil {
 				return err
 			}
-			cf.Aliases[key] = newPath
+			base := filepath.Base(newPath)
+			newKey := strings.TrimSuffix(base, filepath.Ext(base))
+			cf.Apps[newKey] = newPath
 		} else {
 			fmt.Println(key, "already exists, hence overriding it")
 		}
