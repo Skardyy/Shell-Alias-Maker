@@ -166,6 +166,14 @@ func getConfigFilePath() (string, error) {
 	return filepath.Join(dirPath, "config.json"), nil
 }
 
+func getReproduceFilePath() (string, error) {
+	dirPath, err := getConfigDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dirPath, "reproduce.txt"), nil
+}
+
 // returns a file opened using rd|wr|create|0644 flags
 func getFile(filePath string) (*os.File, error) {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0644)
@@ -298,8 +306,26 @@ func populateShellParser(cf configFile) ShellConfigParser {
 			parser.Add(Alias{k, v})
 		}
 	}
+	for k, v := range cf.Paths {
+		parser.ReproducePath(Alias{k, v})
+	}
 
 	return parser
+}
+
+func createReproduceFile(content []string) error {
+	reproduceFilePath, err := getReproduceFilePath()
+	if err != nil {
+		return err
+	}
+	file, err := getFile(reproduceFilePath)
+	defer file.Close()
+
+	strContent := strings.Join(content, "\n")
+	file.Truncate(0)
+	_, err = file.Write([]byte(strContent))
+
+	return nil
 }
 
 func checkDup(buffer bytes.Buffer) string {

@@ -241,6 +241,10 @@ func amend(s string) error {
 	if err != nil {
 		return err
 	}
+	err = createReproduceFile(parser.reproduceContent)
+	if err != nil {
+		return err
+	}
 	fmt.Println("successfully amended, please rerun your shell config file")
 	return nil
 }

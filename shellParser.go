@@ -1,5 +1,7 @@
 package main
 
+import "strings"
+
 type Alias struct {
 	Name   string
 	Target string
@@ -8,6 +10,7 @@ type Alias struct {
 type ShellConfigParser struct {
 	shellConfigPath    string
 	partitionedContent []string
+	reproduceContent   []string
 	ShellParser
 }
 
@@ -24,8 +27,28 @@ func (scp *ShellConfigParser) RemoveAll() {
 	scp.partitionedContent = nil
 }
 func (scp *ShellConfigParser) Add(aliases ...Alias) {
+	scp.ReproduceAlias(aliases...)
 	for _, a := range aliases {
 		scp.partitionedContent = scp.ShellParser.Add(scp.partitionedContent, a)
+	}
+}
+func (scp *ShellConfigParser) ReproduceAlias(aliases ...Alias) {
+	for _, a := range aliases {
+		var target string
+		if strings.Contains(a.Target, " ") {
+			target = "\"" + a.Target + "\""
+		} else {
+			target = a.Target
+		}
+		content := "sam add -alias " + a.Name + " " + target
+		scp.reproduceContent = append(scp.reproduceContent, content)
+	}
+}
+func (scp *ShellConfigParser) ReproducePath(aliases ...Alias) {
+	for _, a := range aliases {
+		target := "\"" + a.Target + "\""
+		content := "sam add -path " + a.Name + " " + target
+		scp.reproduceContent = append(scp.reproduceContent, content)
 	}
 }
 func (scp *ShellConfigParser) confirm() error {
@@ -55,7 +78,7 @@ type PwshConfigParsser struct {
 }
 
 func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
-	newValue := "\nfunction " + alias.Name + " { " + alias.Target + " }"
+	newValue := "\nfunction " + alias.Name + " { param($Arguments) " + alias.Target + " $Arguments } "
 	content = append(content, newValue)
 	return content
 }
