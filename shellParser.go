@@ -78,7 +78,11 @@ type PwshConfigParsser struct {
 }
 
 func (psp *PwshConfigParsser) Add(content []string, alias Alias) []string {
-	newValue := "\nfunction " + alias.Name + " { param($Arguments) " + alias.Target + " $Arguments } "
+	pipes := strings.Split(alias.Target, "|")
+	pipes[0] += " $Arguments "
+	target := strings.Join(pipes, "|")
+
+	newValue := "\nfunction " + alias.Name + " { param($Arguments) " + target + " } "
 	content = append(content, newValue)
 	return content
 }
