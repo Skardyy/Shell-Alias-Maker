@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +16,7 @@ var aCmd *flag.FlagSet
 var cCmd *flag.FlagSet
 var gCmd *flag.FlagSet
 var rCmd *flag.FlagSet
+var iCmd *flag.FlagSet
 var cf configFile
 var apps, _ = getApps()
 
@@ -23,6 +26,10 @@ func main() {
 	if err != nil {
 		fmt.Println("had a problem parsing the config file: ", err)
 	}
+
+	iCmd = flag.NewFlagSet("rm", flag.ExitOnError)
+	iName := iCmd.String("name", "NuShell", "the name of the shell to add")
+	iPath := iCmd.String("path", "~/AppData/Roaming/nushell/config.nu", "the path to the shell config")
 
 	cCmd = flag.NewFlagSet("create", flag.ExitOnError)
 	cBaseDir := cCmd.String("baseDir", "~/desktop", "the base dir to walk from")
@@ -43,13 +50,18 @@ func main() {
 	gPaths := gCmd.Bool("path", false, "gets all stored paths")
 	gApps := gCmd.Bool("app", false, "gets all stored apps")
 
-	flag.BoolFunc("clear", "removes all the content sam created in the shell config file", clear)
-	flag.Func("init", "creates (if dosen't exists) a ~/.sam folder and inside of it config.txt file", Init)
-	flag.BoolFunc("amend", "amends manually deleted/added apps to the config file\nthen amends the changes made in config.json to the shellConfig file\n", amend)
+	flag.Func("clear", "requires the shellName to be ammended, accepts * to ammend to all shells configured.\nremoves all the content sam created in the shell config file", clear)
+	flag.Func("removeShell", "removes a shell that was added using the init method", removeShell)
+	flag.Func("amend", "requires the shellName to be ammended, accepts * to ammend to all shells configured.\namends manually deleted/added apps to the config file\nthen amends the changes made in config.json to the shellConfig file\n", amend)
+	flag.BoolFunc("print", "prints the content of the config file", printConfig)
 
 	flag.Usage = func() {
 		fmt.Println("Global funcs:")
 		flag.PrintDefaults()
+		printBr()
+
+		fmt.Println("init:")
+		iCmd.PrintDefaults()
 		printBr()
 
 		fmt.Println("add:")
@@ -76,6 +88,9 @@ func main() {
 	}
 
 	switch os.Args[1] {
+	case "init":
+		iCmd.Parse(os.Args[2:])
+		handleInit(iName, iPath)
 	case "get":
 		gCmd.Parse(os.Args[2:])
 		handleGet(gDir, gAlias, gPaths, gApps)
@@ -89,8 +104,8 @@ func main() {
 		aCmd.Parse(os.Args[2:])
 		handleAdd(aPath, aAlias, aCmd.Args())
 	case "-clear":
-	case "-init":
 	case "-amend":
+	case "-print":
 	default:
 		if value, flag := cf.Paths[os.Args[1]]; flag {
 			fmt.Println(value)
@@ -101,6 +116,10 @@ func main() {
 	}
 }
 
+func removeShell(shellName string) error {
+	delete(cf.Shells, shellName)
+	return cf.writeConfig()
+}
 func printBr() {
 	fd := int(os.Stdout.Fd())
 	width, _, err := term.GetSize(fd)
@@ -111,6 +130,15 @@ func printBr() {
 
 	line := strings.Repeat("-", width)
 	fmt.Println(line)
+}
+
+func printConfig(s string) error {
+	content, err := json.MarshalIndent(cf, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(content))
+	return nil
 }
 
 func handleAdd(path *bool, alias *bool, args []string) error {
@@ -225,18 +253,28 @@ func handleGet(dir *bool, alias *bool, paths *bool, apps *bool) error {
 	return nil
 }
 
-func Init(newShellConfigPath string) error {
-	cf.ShellConfigPath = newShellConfigPath
-	err := cf.writeConfig()
-
-	return err
+func handleInit(name *string, path *string) error {
+	if cf.Shells == nil {
+		cf.Shells = make(map[string]string)
+	}
+	cf.Shells[strings.ToLower(*name)] = *path
+	return cf.writeConfig()
 }
-func amend(s string) error {
+
+func amend(shellName string) error {
+	shellName = strings.ToLower(shellName)
+	if _, exists := cf.Shells[shellName]; !exists {
+		errStr := "shell was not initialized, please sam sam -init to do so"
+		return errors.New(errStr)
+	}
 	err := cf.ammend(apps)
 	if err != nil {
 		return err
 	}
-	parser := populateShellParser(cf)
+	parser, err := populateShellParser(cf, shellName)
+	if err != nil {
+		return err
+	}
 	err = parser.confirm()
 	if err != nil {
 		return err
@@ -248,7 +286,12 @@ func amend(s string) error {
 	fmt.Println("successfully amended, please rerun your shell config file")
 	return nil
 }
-func clear(s string) error {
-	parser := getDynShellParser(cf)
+
+func clear(shellName string) error {
+	parser := &ShellConfigParser{}
+	err := parser.With(cf.Shells, shellName)
+	if err != nil {
+		return err
+	}
 	return parser.confirm()
 }

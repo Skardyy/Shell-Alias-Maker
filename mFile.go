@@ -16,10 +16,10 @@ import (
 )
 
 type configFile struct {
-	ShellConfigPath string            `json:"shellConfigPath,omitempty"`
-	Aliases         map[string]string `json:"aliases,omitempty"`
-	Apps            map[string]string `json:"apps,omitempty"`
-	Paths           map[string]string `json:"paths,omitempty"`
+	Shells  map[string]string `json:shells,omitempty`
+	Aliases map[string]string `json:"aliases,omitempty"`
+	Apps    map[string]string `json:"apps,omitempty"`
+	Paths   map[string]string `json:"paths,omitempty"`
 }
 
 func (cf *configFile) readConfig() error {
@@ -131,7 +131,7 @@ func getApps() (map[string]string, error) {
 
 		if !info.IsDir() {
 			var fileName = filepath.Base(path)
-			if fileName == "config.json" {
+			if fileName == "config.json" || fileName == "reproduce.txt" {
 				return nil
 			}
 			extension := filepath.Ext(fileName)
@@ -289,9 +289,13 @@ func storePath(src string) (dstName string, err error) {
 	return copyFile(src, dst)
 }
 
-func populateShellParser(cf configFile) ShellConfigParser {
+func populateShellParser(cf configFile, shellName string) (ShellConfigParser, error) {
 	// ---------- gets shell parser ----------
-	parser := getDynShellParser(cf)
+	parser := ShellConfigParser{}
+	err := parser.With(cf.Shells, shellName)
+	if err != nil {
+		return parser, err
+	}
 	// ---------- gets shell parse ----------
 
 	for k, v := range cf.Apps {
@@ -310,7 +314,7 @@ func populateShellParser(cf configFile) ShellConfigParser {
 		parser.ReproducePath(Alias{k, v})
 	}
 
-	return parser
+	return parser, nil
 }
 
 func createReproduceFile(content []string) error {

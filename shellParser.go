@@ -1,6 +1,10 @@
 package main
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 type Alias struct {
 	Name   string
@@ -19,9 +23,19 @@ type ShellParser interface {
 	GetPartitionDel() string
 }
 
-func (scp *ShellConfigParser) With(shellConfigPath string, shellParser ShellParser) {
-	scp.shellConfigPath = shellConfigPath
-	scp.ShellParser = shellParser
+func (scp *ShellConfigParser) With(shells map[string]string, shellName string) error {
+	scp.shellConfigPath = shells[shellName]
+	switch shellName {
+	case "nushell":
+		fmt.Println("using nushell with the path: ", scp.shellConfigPath)
+		scp.ShellParser = &NuShellConfigParsser{}
+	case "pwsh":
+		fmt.Println("using pwsh with the path: ", scp.shellConfigPath)
+		scp.ShellParser = &PwshConfigParsser{}
+	default:
+		return errors.New("shell isn't supported yet")
+	}
+	return nil
 }
 func (scp *ShellConfigParser) RemoveAll() {
 	scp.partitionedContent = nil
@@ -63,14 +77,6 @@ func (scp *ShellConfigParser) confirm() error {
 	return nil
 }
 
-func getDynShellParser(cf configFile) ShellConfigParser {
-	//---------- here give other code different parsers ----------
-	// can switch between goos.os for different ones
-	parser := ShellConfigParser{}
-	parser.With(cf.ShellConfigPath, &PwshConfigParsser{})
-	return parser
-}
-
 // -------------------- create new config parsers to support more shells --------------------
 
 // ---------- PowerShell file parser ----------
@@ -91,3 +97,23 @@ func (psp *PwshConfigParsser) GetPartitionDel() string {
 }
 
 // ---------- PowerShell file parser ----------
+
+// ---------- NuShell file parser ----------
+type NuShellConfigParsser struct {
+}
+
+func (psp *NuShellConfigParsser) Add(content []string, alias Alias) []string {
+	var full string
+	if strings.Contains(alias.Target, "|") {
+		full = "def --env " + alias.Name + " [] { " + alias.Target + " } "
+	} else {
+		full = "alias " + alias.Name + " = start " + alias.Target
+	}
+	content = append(content, full)
+	return content
+}
+func (psp *NuShellConfigParsser) GetPartitionDel() string {
+	return "#SAM"
+}
+
+// ---------- NuShell file parser ----------
