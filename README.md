@@ -1,5 +1,6 @@
 # Shell Alias Maker  
-sam is used for easily creating aliases for terminal
+Sam is used for easily creating shell scripts that run apps or commands and can be ported everywhere  
+
 ## Usage  
 * download sam.exe from [latest release](https://github.com/Skardyy/Shell-Alias-Maker/releases/latest).  
 Or ~  
@@ -10,20 +11,17 @@ go build
 ```
 * add the directory that contains sam.exe file into your env variables
 * start by doing `sam -h` to see the commands
-* you must do `sam -init` before doing `sam -amend` (sam must know where your shell config file is located)
-## Config  
-sam will create a config folder in ~/.sam
-you can `sam -amend` to apply the changed sam config file to your shell file.  
-> \[!Note]  
-> * all apps inside the ~/.sam will be added automatically to the shell config file (names will be inherited)  
-> * you can create aliases to them or to other commands by doing:  
-```pwsh
-sam add -alias fx firefox
-sam add -alias alias original_name
-sam add -alias fzf '--preview "bat --color=always --theme=Dracula {}"'
-```  
-finally do `sam -amend` to apply the changes to the shell file. `sam -amend` also applies manually removed / added files to the ~/.sam folder.
-* the same can be done with paths, only that in paths case it won't add it to the shell config file, but just will be there for u to remmember where is ur config files by just doing `sam get -path`
 
-## Cross-platform / shell compatiblity  
-in order to support new shells, all need to be done is to creat a new struct that implments the ShellParser interface, then in Shell -> getDynShellParser, change to the desired shell parser. switch between goos.os is possible as well for different shells according to need.
+## Config  
+sam will create a dir in ~/.sam where it going to store the config and its prequisites  
+it will include a pre and dst dir, `the dst dir is where the scripts will be generated so you should add this dir into your env path`  
+the pre dir is sam will hold file that were copied over like .lnk .url .exe files and later it going to point to them for easier configuration  
+the pre dir is also where you can add files manually and when doing `sam -a ps1` sam will account for all the manual changes that happend there and in the config.json file  
+> \[!Note]  
+> as mentioned above any manual changes made to the pre folder or the config.json file will account after doing sam -a  
+> yet you will be prompted when there is an conflict between an existing shell scripts and what is specified in the config.json
+
+## The Idea  
+the idea behind this app was to create a portable way to creating shell scripts to run apps and commands like aliases  
+the commands should be simple enough that every shell no matter what platform you use should understand them and act the same  
+some shells tho (nushell for instance) don't support running their own shell scripts by using only name so you may need to search for another tool in those shells  

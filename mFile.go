@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -12,18 +11,20 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/exp/slices"
+	"github.com/fatih/color"
 )
 
-type configFile struct {
-	Shells  map[string]string `json:shells,omitempty`
-	Aliases map[string]string `json:"aliases,omitempty"`
-	Apps    map[string]string `json:"apps,omitempty"`
-	Paths   map[string]string `json:"paths,omitempty"`
+type Alias struct {
+	Name   string
+	Target string
+	App    bool
 }
 
-func (cf *configFile) readConfig() error {
-	// creating the dir
+type configFile struct {
+	Commands map[string]string `json:"commands"`
+}
+
+func initDirs() error {
 	dirPath, err := getConfigDirPath()
 	if err != nil {
 		return err
@@ -31,6 +32,30 @@ func (cf *configFile) readConfig() error {
 	err = os.MkdirAll(dirPath, os.ModePerm)
 	if err != nil {
 		fmt.Println("error creating ~/.sam dir")
+		return err
+	}
+
+	prePath := filepath.Join(dirPath, "pre")
+	err = os.MkdirAll(prePath, os.ModePerm)
+	if err != nil {
+		fmt.Println("error creating ~/.sam/pre dir")
+		return err
+	}
+
+	dstPath := filepath.Join(dirPath, "dst")
+	err = os.MkdirAll(dstPath, os.ModePerm)
+	if err != nil {
+		fmt.Println("error creating ~/.sam dir")
+		return err
+	}
+
+	return nil
+}
+
+func (cf *configFile) readConfig() error {
+	// creating the dir
+	err := initDirs()
+	if err != nil {
 		return err
 	}
 
@@ -50,19 +75,50 @@ func (cf *configFile) readConfig() error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(content, &cf)
+
+	if len(content) != 0 {
+		err = json.Unmarshal(content, &cf)
+		if err != nil {
+			return err
+		}
+	}
+
+	if cf.Commands == nil {
+		cf.Commands = make(map[string]string)
+	}
+	err = cf.writeConfig()
 	if err != nil {
 		return err
 	}
 
-	if cf.Paths == nil {
-		cf.Paths = make(map[string]string)
+	return nil
+}
+
+func (cf *configFile) formatPaths() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
 	}
-	if cf.Apps == nil {
-		cf.Apps = make(map[string]string)
+
+	for key, value := range cf.Commands {
+		if strings.Contains(strings.ToLower(value), strings.ToLower(homeDir)) {
+			cf.Commands[key] = strings.Replace(value, homeDir, "~", 1)
+		}
 	}
-	if cf.Aliases == nil {
-		cf.Aliases = make(map[string]string)
+
+	return nil
+}
+
+func (cf *configFile) deformatPaths() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	for key, value := range cf.Commands {
+		if strings.Contains(value, "~") {
+			cf.Commands[key] = strings.Replace(value, "~", homeDir, 1)
+		}
 	}
 
 	return nil
@@ -80,19 +136,26 @@ func (cf *configFile) writeConfig() error {
 	}
 	defer file.Close()
 
+	//format the content
+	err = cf.formatPaths()
+	if err != nil {
+		return err
+	}
 	//write into file
 	content, err := json.MarshalIndent(cf, "", "  ")
 	if err != nil {
 		return err
 	}
-
 	file.Truncate(0)
+	file.Seek(0, 0)
 	_, err = file.Write(content)
 	if err != nil {
 		return err
 	}
 
-	return nil
+	//deformat the content just in case
+	err = cf.deformatPaths()
+	return err
 }
 
 func (cf *configFile) echo(items map[string]string) string {
@@ -107,19 +170,11 @@ func (cf *configFile) echo(items map[string]string) string {
 	return buffer.String()
 }
 
-func (cf *configFile) ammend(apps map[string]string) error {
-	for key, value := range apps {
-		cf.Apps[key] = value
-	}
-	err := cf.writeConfig()
-	return err
-}
-
-// get the apps inside ~/.sam
+// get the apps inside ~/.sam/pre
 func getApps() (map[string]string, error) {
 	var apps map[string]string = make(map[string]string)
 
-	dir, err := getConfigDirPath()
+	dir, err := getConfigPreDirPath()
 	if err != nil {
 		return nil, err
 	}
@@ -131,9 +186,6 @@ func getApps() (map[string]string, error) {
 
 		if !info.IsDir() {
 			var fileName = filepath.Base(path)
-			if fileName == "config.json" || fileName == "reproduce.txt" {
-				return nil
-			}
 			extension := filepath.Ext(fileName)
 			nameWithoutExtension := fileName[:len(fileName)-len(extension)]
 			apps[nameWithoutExtension] = path
@@ -157,6 +209,24 @@ func getConfigDirPath() (string, error) {
 	return filepath.Join(home, ".sam"), nil
 }
 
+// returns ~/.sam/pre
+func getConfigPreDirPath() (string, error) {
+	dir, err := getConfigDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "pre"), nil
+}
+
+// returns ~/.sam/dst
+func getConfigDstDirPath() (string, error) {
+	dir, err := getConfigDirPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "dst"), nil
+}
+
 // returns ~/.sam/config.json
 func getConfigFilePath() (string, error) {
 	dirPath, err := getConfigDirPath()
@@ -164,14 +234,6 @@ func getConfigFilePath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dirPath, "config.json"), nil
-}
-
-func getReproduceFilePath() (string, error) {
-	dirPath, err := getConfigDirPath()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dirPath, "reproduce.txt"), nil
 }
 
 // returns a file opened using rd|wr|create|0644 flags
@@ -183,36 +245,64 @@ func getFile(filePath string) (*os.File, error) {
 	return file, nil
 }
 
-// replaces/adds the content between the del in the file with content
-func replaceFilePartition(del string, file *os.File, add bool, content ...string) error {
-	scanner := bufio.NewScanner(file)
-	var buffer bytes.Buffer
-	var partitionedBuffer bytes.Buffer
-	insideDel := false
+func promptTillSuccess(prompt string) string {
+	var f string
+	for true {
+		color.Magenta(prompt)
+		fmt.Scanln(&f)
+		if f == "y" || f == "n" {
+			return f
+		}
+	}
+	return f
+}
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, del) && !insideDel {
-			insideDel = true
-		} else if insideDel && strings.HasPrefix(line, del) {
-			insideDel = false
-		} else if !insideDel {
-			buffer.WriteString(line + "\n")
-		} else {
-			partitionedBuffer.WriteString(line + "\n")
+// writes the alias as a shell scripts so it can be ran afterwards
+func parseAlias(alias Alias, ext string, cf *configFile) error {
+	path, err := getConfigDstDirPath()
+	if err != nil {
+		return err
+	}
+
+	file, err := getFile(filepath.Join(path, alias.Name+"."+ext))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	content, err := io.ReadAll(file)
+	if len(content) == 0 {
+		_, err = file.WriteString(alias.Target)
+		color.Green("writing " + alias.Name + "." + ext)
+		if err != nil {
+			fmt.Println("had an issue parsing ", alias.Name, alias.Target)
+			fmt.Println(err)
+		}
+	} else {
+		strContent := string(content)
+		if strContent != alias.Target {
+			fmt.Println(alias.Name+"."+ext, "had an conflict, should i take the one at config.json?")
+			fmt.Println("Original Content:")
+			color.Cyan(strContent)
+			fmt.Println("config.json Content:")
+			color.Cyan(alias.Target)
+			f := promptTillSuccess("replace its content with the one from the config.json? y/n")
+			if f == "n" {
+				cf.Commands[alias.Name] = strContent
+			} else {
+				file.Truncate(0)
+				file.Seek(0, 0)
+				_, err = file.WriteString(alias.Target)
+				color.Green("writing " + alias.Name + "." + ext)
+				if err != nil {
+					fmt.Println("had an issue parsing ", alias.Name, alias.Target)
+					fmt.Println(err)
+				}
+			}
 		}
 	}
 
-	if !add {
-		partitionedBuffer.Truncate(0)
-	}
-	partitionedBuffer.WriteString(strings.Join(content, "\n"))
-	finalContent := checkDup(partitionedBuffer)
-	buffer.WriteString(del + "\n" + finalContent + "\n" + del)
-	file.Close()
-	os.WriteFile(file.Name(), buffer.Bytes(), os.ModePerm)
-
-	return nil
+	return err
 }
 
 // walks the baseDir (can be recursive) to returns all the files ending with 1 of the suffixes
@@ -279,71 +369,13 @@ func copyFile(src string, dstDir string) (dstName string, err error) {
 	return newPath, dstFile.Sync()
 }
 
-// moves a file into the ~/.sam dir
+// moves a file into the ~/.sam/pre dir
 func storePath(src string) (dstName string, err error) {
-	dst, err := getConfigDirPath()
+	dst, err := getConfigPreDirPath()
 	if err != nil {
 		return "", err
 	}
 
+	color.Yellow("Copying " + src)
 	return copyFile(src, dst)
-}
-
-func populateShellParser(cf configFile, shellName string) (ShellConfigParser, error) {
-	// ---------- gets shell parser ----------
-	parser := ShellConfigParser{}
-	err := parser.With(cf.Shells, shellName)
-	if err != nil {
-		return parser, err
-	}
-	// ---------- gets shell parse ----------
-
-	for k, v := range cf.Apps {
-		parser.Add(Alias{k, v})
-	}
-	for k, v := range cf.Aliases {
-		noSpace := strings.Replace(v, " ", "-", -1)
-		app, exists := apps[noSpace]
-		if exists {
-			parser.Add(Alias{k, app})
-		} else {
-			parser.Add(Alias{k, v})
-		}
-	}
-	for k, v := range cf.Paths {
-		parser.ReproducePath(Alias{k, v})
-	}
-
-	return parser, nil
-}
-
-func createReproduceFile(content []string) error {
-	reproduceFilePath, err := getReproduceFilePath()
-	if err != nil {
-		return err
-	}
-	file, err := getFile(reproduceFilePath)
-	defer file.Close()
-
-	strContent := strings.Join(content, "\n")
-	file.Truncate(0)
-	_, err = file.Write([]byte(strContent))
-
-	return nil
-}
-
-func checkDup(buffer bytes.Buffer) string {
-	slice := make([]string, 0)
-	tokens := strings.Split(buffer.String(), "\n")
-	for _, v := range tokens {
-		if slices.Contains(slice, v) {
-			if !strings.HasPrefix(v, "#") {
-				continue
-			}
-		}
-		if v != "" {
-			slice = append(slice, v)
-		}
-	}
-	return strings.Join(slice, "\n")
 }

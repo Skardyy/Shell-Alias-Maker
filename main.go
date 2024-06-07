@@ -2,137 +2,104 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/term"
+	"github.com/fatih/color"
 )
 
-var aCmd *flag.FlagSet
-var cCmd *flag.FlagSet
-var gCmd *flag.FlagSet
-var rCmd *flag.FlagSet
-var iCmd *flag.FlagSet
 var cf configFile
-var apps, _ = getApps()
+var apps map[string]string
+var captureUsuage func()
+var addUsuage func()
 
 func main() {
 	cf = configFile{}
 	err := cf.readConfig()
+	apps, _ = getApps()
 	if err != nil {
 		fmt.Println("had a problem parsing the config file: ", err)
 	}
 
-	iCmd = flag.NewFlagSet("rm", flag.ExitOnError)
-	iName := iCmd.String("name", "NuShell", "the name of the shell to add")
-	iPath := iCmd.String("path", "~/AppData/Roaming/nushell/config.nu", "the path to the shell config")
-
-	cCmd = flag.NewFlagSet("create", flag.ExitOnError)
-	cBaseDir := cCmd.String("baseDir", "~/desktop", "the base dir to walk from")
-	cSuffix := cCmd.String("suffix", ".url .exe .lnk", "all the suffixes to capture")
-	cRecursive := cCmd.Bool("recursive", false, "should the app walk new dir found on baseDir")
-
-	aCmd = flag.NewFlagSet("add", flag.ExitOnError)
-	aPath := aCmd.Bool("path", false, "adds a path to the config, followed by: key:string target:string")
-	aAlias := aCmd.Bool("alias", false, "adds a alias to the config, followed by: key:string target:string")
-
-	rCmd = flag.NewFlagSet("rm", flag.ExitOnError)
-	rPath := rCmd.Bool("path", false, "removes a path from the config, followed by: key:string")
-	rAlias := rCmd.Bool("alias", false, "removes a alias from the config, followed by: key:string")
-
-	gCmd = flag.NewFlagSet("get", flag.ExitOnError)
-	gDir := gCmd.Bool("dir", false, "gets the dir of all sam configs")
-	gAlias := gCmd.Bool("alias", false, "gets all the created aliases")
-	gPaths := gCmd.Bool("path", false, "gets all stored paths")
-	gApps := gCmd.Bool("app", false, "gets all stored apps")
-
-	flag.Func("clear", "requires the shellName to be ammended, accepts * to ammend to all shells configured.\nremoves all the content sam created in the shell config file", clear)
-	flag.Func("removeShell", "removes a shell that was added using the init method", removeShell)
-	flag.Func("amend", "requires the shellName to be ammended, accepts * to ammend to all shells configured.\namends manually deleted/added apps to the config file\nthen amends the changes made in config.json to the shellConfig file\n", amend)
-	flag.BoolFunc("print", "prints the content of the config file", printConfig)
-
-	flag.Usage = func() {
-		fmt.Println("Global funcs:")
-		flag.PrintDefaults()
-		printBr()
-
-		fmt.Println("init:")
-		iCmd.PrintDefaults()
-		printBr()
-
-		fmt.Println("add:")
-		aCmd.PrintDefaults()
-		printBr()
-
-		fmt.Println("rm:")
-		rCmd.PrintDefaults()
-		printBr()
-
-		fmt.Println("create:")
-		cCmd.PrintDefaults()
-		printBr()
-
-		fmt.Println("get:")
-		gCmd.PrintDefaults()
-		printBr()
+	captureUsuage = func() {
+		fmt.Println("capture:")
+		fmt.Println("  -dir          the base dir to search from")
+		fmt.Println("  -ext          (optional) the suffixes to search for, default is: '.lnk .url .exe'")
+		fmt.Println("  -r            (optional) rather or not to walk the path recursively")
+		fmt.Println("  -c            (optional) rather or not to copy the captured file")
 	}
-	flag.Parse()
+	addUsuage = func() {
+		fmt.Println("add:")
+		fmt.Println("  -name         the name of shell script")
+		fmt.Println("  -target       the content of the shell script (either a script or a path to an executable)")
+		fmt.Println("  -c            (optional) rather or not to copy the captured file")
+	}
+	usuage := func() {
+		captureUsuage()
+
+		fmt.Println("")
+		addUsuage()
+
+		fmt.Println("")
+		fmt.Println("-apply -a       applies the config.json to create shell scripts, requires file extension (like .nu / .bat / .ps1 et..)")
+		fmt.Println("-print -p       prints the config.json content formatted")
+	}
 
 	if len(os.Args) < 2 {
-		flag.Usage()
+		usuage()
 		os.Exit(0)
 	}
 
 	switch os.Args[1] {
-	case "init":
-		iCmd.Parse(os.Args[2:])
-		handleInit(iName, iPath)
-	case "get":
-		gCmd.Parse(os.Args[2:])
-		handleGet(gDir, gAlias, gPaths, gApps)
-	case "rm":
-		rCmd.Parse(os.Args[2:])
-		handleRemove(rPath, rAlias, rCmd.Args())
-	case "create":
-		cCmd.Parse(os.Args[2:])
-		handleCreate(cBaseDir, cSuffix, cRecursive)
+	case "-h":
+		usuage()
+		os.Exit(0)
+	case "capture":
+		capture()
+		os.Exit(0)
 	case "add":
-		aCmd.Parse(os.Args[2:])
-		handleAdd(aPath, aAlias, aCmd.Args())
-	case "-clear":
-	case "-amend":
+		add()
+		os.Exit(0)
+	case "-apply":
+		apply()
+		os.Exit(0)
+	case "-a":
+		apply()
+		os.Exit(0)
 	case "-print":
+		printConfig()
+		os.Exit(0)
+	case "-p":
+		printConfig()
+		os.Exit(0)
 	default:
-		if value, flag := cf.Paths[os.Args[1]]; flag {
-			fmt.Println(value)
-			os.Exit(0)
-		}
 		fmt.Println(os.Args[1], "Isn't a command, try sam -h")
 		os.Exit(0)
 	}
 }
 
-func removeShell(shellName string) error {
-	delete(cf.Shells, shellName)
-	return cf.writeConfig()
-}
-func printBr() {
-	fd := int(os.Stdout.Fd())
-	width, _, err := term.GetSize(fd)
-	if err != nil {
-		fmt.Println(err)
-		width = 100
+func findArgAndNext(args []string, targetArg string, onlyArg bool) (string, bool) {
+	for i := 0; i < len(args); i++ {
+		if args[i] == targetArg && onlyArg {
+			return "", true
+		}
+		if args[i] == targetArg {
+			// Check if there is a next argument
+			if i+1 < len(args) {
+				return args[i+1], true
+			} else {
+				// Target found but no next argument
+				return "", false
+			}
+		}
 	}
-
-	line := strings.Repeat("-", width)
-	fmt.Println(line)
+	// Target not found
+	return "", false
 }
 
-func printConfig(s string) error {
+func printConfig() error {
 	content, err := json.MarshalIndent(cf, "", "  ")
 	if err != nil {
 		return err
@@ -141,157 +108,117 @@ func printConfig(s string) error {
 	return nil
 }
 
-func handleAdd(path *bool, alias *bool, args []string) error {
-	if len(args) < 2 || (!*path && !*alias) {
-		aCmd.PrintDefaults()
-		os.Exit(0)
-	}
-	key, target := args[0], args[1]
-	if *path {
-		if _, flag := cf.Paths[key]; flag {
-			var f string
-			fmt.Println(key, "already exists in your stored paths, override it? y/n")
-			fmt.Scanln(&f)
-			if f != "y" {
-				os.Exit(0)
-			}
-		}
-		cf.Paths[key] = target
-		err := cf.writeConfig()
-		if err != nil {
-			return err
-		}
-	}
-	if *alias {
-		if _, flag := cf.Aliases[key]; flag {
-			var f string
-			fmt.Println(key, "already exists in your stored aliases, override it? y/n")
-			fmt.Scanln(&f)
-			if f != "y" {
-				os.Exit(0)
-			}
-		}
-		cf.Aliases[key] = target
-		err := cf.writeConfig()
-		if err != nil {
-			return err
-		}
-		fmt.Println("please ammend to change the shell")
-	}
-	return nil
-}
+func add() error {
+	args := os.Args
+	name, nameOk := findArgAndNext(args, "-name", false)
+	target, targetOk := findArgAndNext(args, "-target", false)
+	_, copyOk := findArgAndNext(args, "-copy", false)
 
-func handleRemove(path *bool, alias *bool, args []string) error {
-	if len(args) < 1 || (!*path && !*alias) {
-		rCmd.PrintDefaults()
+	if !nameOk || !targetOk {
+		addUsuage()
 		os.Exit(0)
 	}
-	key := args[0]
-	if *path {
-		delete(cf.Paths, key)
-	}
-	if *alias {
-		delete(cf.Aliases, key)
+
+	//check if already exists in the config.json file
+	_, added := addSingle(name, target, copyOk)
+	if !added {
+		os.Exit(0)
 	}
 	err := cf.writeConfig()
 	if err != nil {
 		return err
 	}
-	fmt.Println("please ammend to change the shell")
+	color.Magenta("please apply to see the changes")
 	return nil
 }
 
-func handleCreate(baseDir *string, suffix *string, recursive *bool) error {
-	suffixes := strings.Split(*suffix, " ")
-	aliases, err := walkBaseDir(*baseDir, suffixes, *recursive)
+func addSingle(name string, path string, copyFlag bool) (string, bool) {
+	if _, flag := cf.Commands[name]; flag {
+		f := promptTillSuccess("already exists in your stored commands, override it? y/n")
+		if f != "y" {
+			return "", false
+		}
+	}
+
+	newPath := path
+	if copyFlag {
+		attempPath, err := storePath(path)
+		if err != nil {
+			return "", false
+		}
+		newPath = attempPath
+	}
+	//write it to the config.json file
+	cf.Commands[name] = newPath
+	return newPath, true
+}
+
+func capture() error {
+	args := os.Args
+	dir, dirOk := findArgAndNext(args, "-dir", false)
+	ext, extOk := findArgAndNext(args, "-ext", false)
+	_, recursiveOk := findArgAndNext(args, "-r", true)
+	_, copyOk := findArgAndNext(args, "-c", true)
+	suffixes := []string{".url", ".lnk", ".exe"}
+	if extOk {
+		suffixes = strings.Split(ext, " ")
+	}
+
+	if !dirOk {
+		captureUsuage()
+		os.Exit(0)
+	}
+
+	aliases, err := walkBaseDir(dir, suffixes, recursiveOk)
 	if err != nil {
 		return err
 	}
 
 	for key, target := range aliases {
-		if _, flag := cf.Apps[key]; !flag {
-			newPath, err := storePath(target)
-			if err != nil {
-				return err
-			}
-			base := filepath.Base(newPath)
-			newKey := strings.TrimSuffix(base, filepath.Ext(base))
-			cf.Apps[newKey] = newPath
-		} else {
-			fmt.Println(key, "already exists, hence overriding it")
+		newPath, added := addSingle(key, target, copyOk)
+		if !added {
+			continue
 		}
+		base := filepath.Base(newPath)
+		key := strings.TrimSuffix(base, filepath.Ext(base))
+		cf.Commands[key] = newPath
 	}
 
 	err = cf.writeConfig()
 	if err != nil {
-		return err
+		fmt.Println("had an issue writing to config.json", err)
+	} else {
+		color.Magenta("please apply to see the changes")
 	}
-	fmt.Println("Please use the amend command to apply the changes")
 	return nil
 }
 
-func handleGet(dir *bool, alias *bool, paths *bool, apps *bool) error {
-	if !*dir && !*alias && !*paths && !*apps {
-		gCmd.PrintDefaults()
+func apply() error {
+	ext, extOk := findArgAndNext(os.Args, "-a", false)
+	if !extOk {
+		fmt.Println("apply requires file extension specified, please see sam -h")
+		os.Exit(0)
 	}
-	if *dir {
-		path, err := getConfigDirPath()
-		if err != nil {
-			return err
+
+	for key, target := range apps {
+		if _, ok := cf.Commands[key]; !ok {
+			color.Green("adding " + key + " to the config file")
+			cf.Commands[key] = target
 		}
-		fmt.Println(path)
 	}
-	if *alias {
-		fmt.Println(cf.echo(cf.Aliases))
+
+	for key, target := range cf.Commands {
+		alias := Alias{Name: key, Target: target}
+		err := parseAlias(alias, ext, &cf)
+		if err != nil {
+			fmt.Println("error applying", key, err)
+		}
 	}
-	if *paths {
-		fmt.Println(cf.echo(cf.Paths))
+
+	err := cf.writeConfig()
+	if err != nil {
+		fmt.Println("had an issue writing to config.json", err)
 	}
-	if *apps {
-		fmt.Println(cf.echo(cf.Apps))
-	}
+
 	return nil
-}
-
-func handleInit(name *string, path *string) error {
-	if cf.Shells == nil {
-		cf.Shells = make(map[string]string)
-	}
-	cf.Shells[strings.ToLower(*name)] = *path
-	return cf.writeConfig()
-}
-
-func amend(shellName string) error {
-	shellName = strings.ToLower(shellName)
-	if _, exists := cf.Shells[shellName]; !exists {
-		errStr := "shell was not initialized, please sam sam -init to do so"
-		return errors.New(errStr)
-	}
-	err := cf.ammend(apps)
-	if err != nil {
-		return err
-	}
-	parser, err := populateShellParser(cf, shellName)
-	if err != nil {
-		return err
-	}
-	err = parser.confirm()
-	if err != nil {
-		return err
-	}
-	err = createReproduceFile(parser.reproduceContent)
-	if err != nil {
-		return err
-	}
-	fmt.Println("successfully amended, please rerun your shell config file")
-	return nil
-}
-
-func clear(shellName string) error {
-	parser := &ShellConfigParser{}
-	err := parser.With(cf.Shells, shellName)
-	if err != nil {
-		return err
-	}
-	return parser.confirm()
 }
